@@ -1,0 +1,218 @@
+---
+title: "DeFi Survival and LTM Project Notebook (qinh2):"
+subtitle: "DEFI - Survival Data Pipeline (Fall 2024)"
+author: "Hanzhen Qin(qinh2)"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+  html_document:
+    toc: true
+    number_sections: true
+    df_print: paged
+---
+```{r setup, include=FALSE}
+# Required R package installation; RUN THIS BLOCK BEFORE ATTEMPTING TO KNIT THIS NOTEBOOK!!!
+# This section installs packages if they are not already installed.
+# This block will not be shown in the knit file.
+
+knitr::opts_chunk$set(echo = TRUE)
+
+# Set the default CRAN repository
+local({
+  r <- getOption("repos")
+  r["CRAN"] <- "http://cran.r-project.org" 
+  options(repos = r)
+})
+
+# Load required packages and install if necessary
+required_packages <- c("rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
+"randomForest", "caret", "survival", "survminer", "ggplot2", "kableExtra", "rpart", "glmnet", "data.table", "class", "reshape2", "pander", "readr", "dplyr", "ROSE")
+
+# Check and install missing packages
+for (pkg in required_packages) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg, dependencies = TRUE)
+    library(pkg, character.only = TRUE)
+  }
+}
+
+# library preference
+select <- dplyr::select
+rename <- dplyr::rename
+summarize <- dplyr::summarize
+group_by <- dplyr::group_by
+```
+
+# Comprehensive Data Combination Classification and Prediction - Simple Example
+
+In this section, I will apply all classification models to evaluate all data combinations, aiming to achieve comprehensive results. The outcomes will be visualized using bar graphs, and a detailed final dataframe will be generated to record all the results systematically.
+
+```{r}
+source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/data_preprocessing.R")
+source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/model_evaluation_visual.R")
+source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/classification_models.R")
+source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/get_classification_cutoff.R")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "withdraw"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+# If you want to check the train and test data, you can run the following codes.
+# cat("Train data:\n")
+# summary(train)
+# cat("Test data:\n")
+# summary(test)
+```
+
+Using the `get_classification_cutoff` funtion to get the optimal timeDiff, then we will call the `data_processing` function above to get all the training data and test data.
+
+```{r}
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+If the ratio of "No" labels to "Yes" labels in the dataset is significantly imbalanced, we can utilize the `smote_data` function to generate a new, more balanced dataset. This balanced dataset ensures that both classes are better represented, helping to mitigate the bias introduced by class imbalance and ultimately improving the accuracy and reliability of our classification model.
+
+```{r}
+train_data <- smote_data(train_data)
+```
+
+Then you can check the updated balanced version of train data.
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+After obtaining the train and test data, we start to analyze the data combination with `indexEvent = "Deposit"` and `outcomeEvent = "Withdraw"`. We will apply all the classification models to evaluate the relationship between these events.
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+pander(accuracy_lr_dataframe, caption = "Logistic Regression Performance")
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+pander(accuracy_dt_dataframe, caption = "Decision Tree Performance")
+```
+
+```{r}
+# compare all the classification models
+metrics_list_BW <- list(
+  list(accuracy_lr, "Logistic Regression"),
+  list(accuracy_dt, "Decision Tree")
+)
+accuracy_comparison_plot(metrics_list_BW)
+```
+
+```{r}
+# Show the final dataframe for all four types of classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BW <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BW <- list(accuracy_lr_dataframe, accuracy_dt_dataframe)
+combined_results_BW <- combine_classification_results(accuracy_dataframe_list_BW, data_name_BW)
+
+# display the combined dataframe
+# print(combined_results)
+pander(combined_results_BW, caption = "Classification Model Performance for borrow + withdraw")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "repay"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+# If you want to check the train and test data, you can run the following codes.
+# cat("Train data:\n")
+# summary(train)
+# cat("Test data:\n")
+# summary(test)
+### Get The Specified Accuracy dataframe
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+pander(accuracy_lr_dataframe, caption = "Logistic Regression Performance")
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+pander(accuracy_dt_dataframe, caption = "Decision Tree Performance")
+```
+
+```{r}
+# compare all the classification models
+metrics_list_BR <- list(
+  list(accuracy_lr, "Logistic Regression"),
+  list(accuracy_dt, "Decision Tree")
+)
+accuracy_comparison_plot(metrics_list_BR)
+```
+
+```{r}
+# Show the final dataframe for all four types of classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BR <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BR <- list(accuracy_lr_dataframe, accuracy_dt_dataframe)
+combined_results_BR <- combine_classification_results(accuracy_dataframe_list_BR, data_name_BR)
+
+# display the combined dataframe
+# print(combined_results)
+pander(combined_results_BR, caption = "Classification Model Performance for borrow + repay")
+```
+
+After we run all the data combinations, we can use the `combine_accuracy_dataframes` to combine all the classification models' performance into one dataframe.
+
+```{r}
+combined_classification_results <- combine_accuracy_dataframes(
+  list(combined_results_BW, combined_results_BR))
+pander(combined_classification_results, caption = "Classification Model Performance for all data")
+```
+
+## Generating Dataframe for Specified Accuracy
+
+This section is only for a special need, not required for the whole pipeline workflow!!!
+
+In this section, the final output is a combined data frame that consolidates performance metrics for multiple classification models across different data scenarios. Each row represents a specific scenario (e.g., "borrow + withdraw" or "borrow + repay"), while the columns display the selected performance metric (e.g., "balanced_accuracy") and the corresponding values for each classification model (e.g., Logistic Regression, Decision Tree). 
+
+```{r}
+ba_accuracy_dataframe_BW <- specific_accuracy_statistics(data_name_BW, "balanced_accuracy", 
+                                                      metrics_list_BW)
+ba_accuracy_dataframe_BR <- specific_accuracy_statistics(data_name_BR, "balanced_accuracy", 
+                                                      metrics_list_BR)
+combined_accuracy_dataframe <- combine_accuracy_dataframes(
+  list(ba_accuracy_dataframe_BW, ba_accuracy_dataframe_BR))
+pander(combined_accuracy_dataframe, caption = "Combined accuracy dataframe")
+```

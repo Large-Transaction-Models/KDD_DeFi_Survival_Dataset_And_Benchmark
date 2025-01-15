@@ -1,0 +1,198 @@
+---
+title: "DeFi Survival and LTM Project Notebook (qinh2):"
+subtitle: "DEFI - Survival Data Pipeline Usage Guide (Fall 2024)"
+author: "Hanzhen Qin(qinh2)"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+  html_document:
+    toc: true
+    number_sections: true
+    df_print: paged
+---
+```{r setup, include=FALSE}
+# Required R package installation; RUN THIS BLOCK BEFORE ATTEMPTING TO KNIT THIS NOTEBOOK!!!
+# This section installs packages if they are not already installed.
+# This block will not be shown in the knit file.
+
+knitr::opts_chunk$set(echo = TRUE)
+
+# Set the default CRAN repository
+local({
+  r <- getOption("repos")
+  r["CRAN"] <- "http://cran.r-project.org" 
+  options(repos = r)
+})
+
+# Load required packages and install if necessary
+required_packages <- c("rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
+"randomForest", "caret", "survival", "survminer", "ggplot2", "kableExtra", "rpart", "glmnet", "data.table", "class", "reshape2", "pander", "readr", "dplyr", "ROSE")
+
+# Check and install missing packages
+for (pkg in required_packages) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg, dependencies = TRUE)
+    library(pkg, character.only = TRUE)
+  }
+}
+
+# library preference
+select <- dplyr::select
+rename <- dplyr::rename
+summarize <- dplyr::summarize
+group_by <- dplyr::group_by
+```
+
+# Survival Data Pipeline Usage Guide
+
+This file demonstrates how to use the functions in our pipeline, detailing the structure of the separation model's output and how the results are presented. It does not provide a step-by-step explanation of each function in the pipeline. If you have any questions or need further clarification, please refer to `survivalData_pipeline.Rmd`, which contains a comprehensive introduction to each function.
+
+```{r}
+source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/data_preprocessing.R")
+source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/model_evaluation_visual.R")
+source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/classification_models.R")
+source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/get_classification_cutoff.R")
+
+# set the indexEvent and outcomeEvent
+indexEvent = "Type your dataset index name - lowercase"
+outcomeEvent = "Type your dataset outcome name - lowercase"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+# If you want to check the train and test data, you can run the following codes.
+# cat("Train data:\n")
+# summary(train)
+# cat("Test data:\n")
+# summary(test)
+```
+
+Using the `get_classification_cutoff` funtion to get the optimal timeDiff, then we will call the `data_processing` function above to get all the training data and test data.
+
+```{r}
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+If the ratio of "No" labels to "Yes" labels in the dataset is significantly imbalanced, we can utilize the `smote_data` function to generate a new, more balanced dataset. This balanced dataset ensures that both classes are better represented, helping to mitigate the bias introduced by class imbalance and ultimately improving the accuracy and reliability of our classification model.
+
+```{r}
+train_data <- smote_data(train_data)
+```
+
+Then you can check the updated balanced version of train data.
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+After obtaining the train and test data, we start to analyze the data combination. We will apply all the classification models to evaluate the relationship between these events. Also, in this part you guys can merge your classification models inside and to get the output for each data combinations.
+
+## Details for classification models' requirements
+
+```{r}
+# All the classification models can only have two parameters: train data and test data.
+classification_model_name <- function(train_data, test_data) {
+  # The codes to be implemented...
+  
+  # the following structure should be fixed
+  predict_probabilities <- predict(classification_model_name, test_data, ...)
+  # confusion matrix and metrics
+  confusion_matrix <- table(Predicted = predict_probabilities, Actual = test_data$event)
+  metrics <- calculate_model_metrics(confusion_matrix, predict_probabilities, 
+                                        "classification model name")
+  # create a dataframe with the desired structure
+  metrics_dataframe = get_dataframe("classification model name", metrics)
+  # each classification models need to return these two variables
+  return (list(metrics_dataframe = metrics_dataframe, metrics = metrics))
+}
+```
+
+## Testing the classification models
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+pander(accuracy_lr_dataframe, caption = "Logistic Regression Performance")
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+pander(accuracy_dt_dataframe, caption = "Decision Tree Performance")
+```
+
+```{r}
+rdf_return = random_forest(train_data, test_data)
+accuracy_rdf_dataframe = rdf_return$metrics_rdf_dataframe
+accuracy_rdf = rdf_return$metrics_rdf
+pander(accuracy_rdf_dataframe, caption = "Random Forest Performance")
+```
+
+```{r}
+x_return = your_classification_model(train_data, test_data)
+accuracy_x_dataframe = x_return$metrics_x_dataframe
+accuracy_x = x_return$metrics_x
+pander(accuracy_x_dataframe, caption = "Your classification models' name")
+```
+
+```{r}
+# compare all the classification models
+# For example, your indexEvent = "XX", outcomeEvent = "YY"
+metrics_list_XY <- list(
+  list(accuracy_lr, "Logistic Regression"),
+  list(accuracy_dt, "Decision Tree"),
+  list(accuracy_rdf, "Random Forest"),
+  list(accuracy_x, "Your classification models' name")
+  # add more classification models accuracy metrics here, the optimal length of the list is 6.
+  # If more than 6 classification models, just create a new metrics_list.
+)
+accuracy_comparison_plot(metrics_list_XY)
+```
+
+```{r}
+# Show the final dataframe for all four types of classification models,
+# including the classification model name, accuracy, data combination name.
+
+# For example, your indexEvent = "XX", outcomeEvent = "YY"
+data_name_XY <- paste(indexEvent, "+", outcomeEvent)
+# add more classification models dataframe here, no limited.
+accuracy_dataframe_list_XY <- list(accuracy_lr_dataframe, 
+                                accuracy_dt_dataframe,
+                                accuracy_rdf_dataframe, 
+                                accuracy_x_dataframe)
+combined_results_XY <- combine_classification_results(accuracy_dataframe_list_XY, data_name_XY)
+
+# display the combined dataframe
+# print(combined_results)
+pander(combined_results_XY, caption = "Classification Model Performance")
+```
+
+## Generating Dataframe for Specified Accuracy
+
+This section is only for a special need, not required for the whole pipeline workflow!!!
+
+In this section, the final output is a combined data frame that consolidates performance metrics for multiple classification models across different data scenarios. Each row represents a specific scenario (e.g., "borrow + withdraw" or "borrow + repay"), while the columns display the selected performance metric (e.g., "balanced_accuracy") and the corresponding values for each classification model (e.g., Logistic Regression, Decision Tree). 
+
+```{r}
+# For example, you have two data combinations:
+# indexEvent = "XX", outcomeEvent = "YY" and indexEvent = "XX", outcomeEvent = "ZZ"
+accuracyName_accuracy_dataframe_XY <- specific_accuracy_statistics(
+  data_name_XY, "the specific accuracy you want", metrics_list_XY)
+accuracyName_accuracy_dataframe_XZ <- specific_accuracy_statistics(
+  data_name_XZ, "the specific accuracy you want, the same as above", metrics_list_XZ)
+# You can have more accuracyName_accuracy_dataframe_() here and then merge to the following list
+combined_accuracy_dataframe <-combine_specific_accuracy_dataframes(
+  list(accuracyName_accuracy_dataframe_XY, accuracyName_accuracy_dataframe_XZ, ...))
+pander(combined_accuracy_dataframe, caption = "Combined accuracy dataframe")
+```

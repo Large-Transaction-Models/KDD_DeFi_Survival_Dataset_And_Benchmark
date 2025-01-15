@@ -1,0 +1,62 @@
+```{r}
+library(survival)
+library(survminer)
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(patchwork)
+library(ggpubr)
+
+source("../dataLoader.R")
+
+
+select <- dplyr::select
+rename <- dplyr::rename
+
+allSurvivalData <- allSurvivalData %>%
+  rename(outcome_event = `Outcome Event`) %>%
+  rename(index_event = `Index Event`)
+```
+
+```{r}
+slice <- allSurvivalData %>%
+  slice_sample(prop = 0.05)
+# Unique index events
+index_events <- unique(slice$index_event)
+
+plots = NULL
+# Create list of plots
+for(index_event in index_events){
+  # Filter data for the specific index event
+  subset <- slice %>% filter(index_event == !!index_event)
+  
+  # Fit Kaplan-Meier curves
+  survObject <- Surv(time = subset$timeDiff/86400, event = as.numeric(subset$status))
+  fit <- survfit(survObject ~ outcome_event, data = subset)
+  
+  plots[[index_event]] <- ggsurvplot(
+    fit, 
+    data = subset, 
+    conf.int = TRUE,
+    pval = TRUE,
+    censor = FALSE,
+    legend.title = "Outcome Event",
+    legend.labs = unique(slice$outcome_event),
+    title = paste("Index Event: ", index_event),
+    xlab = "Time",
+    ylab = "Survival Probability")$plot
+}
+
+# Arrange plots in a grid
+grid.arrange(grobs = plots, ncol = 2)
+```
+
+```{r}
+toSave <- ggarrange(plotlist = plots,
+          nrow = 2,
+          ncol = 2,
+          legend = "right",
+          common.legend = TRUE)
+
+ggsave("./figures/kmCurves.pdf", plot = toSave, height = 5, width = 8)
+```

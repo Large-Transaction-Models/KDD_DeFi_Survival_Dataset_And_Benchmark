@@ -1,0 +1,660 @@
+---
+title: "DeFi Survival and LTM Project Notebook (qinh2):"
+subtitle: "DEFI - Survival Data Pipeline (Fall 2024)"
+author: "Hanzhen Qin(qinh2)"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+    df_print: paged
+  pdf_document: 
+    latex_engine: xelatex
+---
+```{r setup, include=FALSE}
+# Required R package installation; RUN THIS BLOCK BEFORE ATTEMPTING TO KNIT THIS NOTEBOOK!!!
+# This section installs packages if they are not already installed.
+# This block will not be shown in the knit file.
+
+knitr::opts_chunk$set(echo = TRUE)
+
+# Set the default CRAN repository
+local({
+  r <- getOption("repos")
+  r["CRAN"] <- "http://cran.r-project.org" 
+  options(repos = r)
+})
+
+# Load required packages and install if necessary
+required_packages <- c("rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
+"randomForest", "caret", "survival", "survminer", "ggplot2", "kableExtra", "rpart", "glmnet", "data.table", "class", "reshape2", "pander", "readr", "dplyr", "e1071", "ROSE")
+
+# Check and install missing packages
+for (pkg in required_packages) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg, dependencies = TRUE)
+    library(pkg, character.only = TRUE)
+  }
+}
+
+# library preference
+select <- dplyr::select
+rename <- dplyr::rename
+summarize <- dplyr::summarize
+group_by <- dplyr::group_by
+```
+
+# Survival Data Pipeline
+
+## Pipeline Summary
+
+* Summary of work
+  
+  * Data preprocessing: `data_processing`, `get_train_test_data`, `smote_data`, 
+  `get_classification_cutoff`
+  
+  * Model Performance Evaluation and Visualization : `calculate_model_metrics`, `get_dataframe`,
+  `combine_classification_results`, `accuracy_comparison_plot`, `get_percentage`, 
+  `specific_accuracy_statistics`, `combine_accuracy_dataframes`
+  
+  * Classification model: `logistic_regression`, `decision_tree`, `random_forest`, `KNN(not used)`
+  , `Naive_bayes(not recommended)`
+
+## Data Preprocessing
+
+### def get_train_test_data
+
+The `get_train_test_data` function is designed to get the training and test data based on the `indexEvent` and `outcomeEvent` parameters, but the specific logic has not yet been implemented. The function references the external script `dataLoader.r` through `source()` to load the latest processed survival data, and returns the train and test data sets directly by default.
+
+```{r}
+get_train_test_data <- function(indexEvent, outcomeEvent) {
+  source("~/DAR-DeFi-LTM-F24/DeFi_source/dataLoader.R")
+}
+```
+
+### def data_processing
+
+The `data_processing` function is designed to transform a survival analysis dataset into a format suitable for classification tasks by performing a series of preprocessing steps. It begins by filtering out invalid records where `timeDiff` is less than or equal to 0, ensuring only valid observations are retained. Then, it removes records where `timeDiff` falls within a specified threshold (`set_timeDiff`) but no event occurred (`status == 0`). A new binary column, `event`, is created to indicate whether an event occurred within the threshold ("yes" or "no"). The function drops unnecessary columns as defined in a predefined list, ensuring only relevant features remain, and removes columns entirely populated with missing values. To handle missing data, numeric columns are filled with `-999` to mark missing values clearly without distorting numerical distributions, and categorical columns are filled with `"missing"` to create a distinct category for absent data. Finally, character columns are converted to factors, making them ready for classification models.
+
+```{r}
+data_processing <- function(survivalData, set_timeDiff) {
+  # filter out invalid records where `timeDiff` is <= 0 early
+  survivalData <- survivalData %>% filter(timeDiff > 0)
+  
+  # filter out records based on the `set_timeDiff` threshold and `status`
+  survivalData <- survivalData %>% filter(!(timeDiff / 86400 <= set_timeDiff & status == 0))
+  
+  # create a new binary column `event` based on `timeDiff`
+  survivalDataForClassification <- survivalData %>%
+    mutate(event = case_when(
+      timeDiff / 86400 <= set_timeDiff ~ "yes",
+      timeDiff / 86400 > set_timeDiff ~ "no"
+    ))
+  
+  # define features to drop
+  # featuresToDrop <- c("indexTime", "outcomeTime", "id", "Index Event", "Outcome Event",
+  #                     "timeDiff", "deployment", "version", "indexID", "user", "status", 
+  #                     "quarter", "liquidator", "userFlashloanAvgAmount", "userReserveMode",
+  #                     "reserve", "pool", "timestamp", "type", "datetime", "quarter_start_date",
+  #                     "userCoinTypeMode", "coinType", "userIsNew", "userDepositSum", 
+  #                     "userDepositSumUSD", "userDepositAvgAmountUSD", "userDepositSumETH",
+  #                     "userDepositAvgAmountETH", "userWithdrawSum", "userWithdrawSumUSD",
+  #                     "userWithdrawAvgAmountUSD", "userWithdrawSumETH", 
+  #                     "userWithdrawAvgAmountETH", "userBorrowSum", "userBorrowSumUSD", 
+  #                     "userBorrowAvgAmountUSD", "userBorrowSumETH", 
+  #                     "userBorrowAvgAmountETH", "userRepaySum", "userRepaySumUSD", 
+  #                     "userRepayAvgAmountUSD", "userRepaySumETH", "userRepayAvgAmountETH", 
+  #                     "userFlashloanSum", "userLiquidationSum", "userLiquidationSumUSD",
+  #                     "userLiquidationAvgAmountUSD", "userLiquidationSumETH", 
+  #                     "userLiquidationAvgAmountETH", "userFlashloanCount", "priceInUSD")
+  
+  featuresToDrop <- c("indexTime", "outcomeTime", "id", "Index Event", "Outcome Event",
+                      "timeDiff", "status", "deployment", "version", "indexID", "user", 
+                      "liquidator", "pool", "timestamp", "type", "datetime", "quarter_start_date")
+  
+  # remove only columns that actually exist in the dataset
+  featuresToDrop <- intersect(featuresToDrop, colnames(survivalDataForClassification))
+  
+  survivalDataForClassification <- survivalDataForClassification %>%
+    # drop unnecessary columns
+    select(-any_of(featuresToDrop)) %>%
+    # remove columns with only NA values
+    select(where(~ !all(is.na(.)))) %>%
+    # replace NA in numeric columns with -999
+    mutate(across(where(is.numeric), ~ replace_na(., -999))) %>%
+    # replace NA in character columns with "missing"
+    mutate(across(where(is.character), ~ replace_na(., "missing"))) %>%
+    # convert character columns to factors
+    mutate(across(where(is.character), as.factor))
+  
+  # return the processed dataset
+  return(survivalDataForClassification)
+}
+```
+
+### def get_classification_cutoff (@Author: Aaron Green)
+
+The `get_classification_cutoff` function retrieves the `ConvergedRMST_5` value from a predefined dataset based on the specified `indexEvent` and `outcomeEvent`. The dataset contains information about various index events (e.g., "Borrow", "Deposit") and their corresponding outcome events (e.g., "Full Repay", "Withdraw"), along with convergence metrics like `ConvergedTau` and `ConvergedRMST` at different time horizons. The function filters the dataset by matching the input events with the respective `IndexEvent` and `OutcomeEvent` columns and returns the relevant `ConvergedRMST_5` value, which represents a specific metric of convergence over a 5-unit time period. Return the optimal cutoff value for the `data_processing` function.
+
+```{r}
+get_classification_cutoff <- function(indexEvent, outcomeEvent){
+  # library(stringr)
+  # Create the dataframe
+  data <- data.frame(
+    IndexEvent = c("Borrow", "Borrow", "Borrow", "Borrow", "Borrow", "Borrow", 
+                   "Deposit", "Deposit", "Deposit", "Deposit", "Deposit", 
+                   "Repay", "Repay", "Repay", "Repay", "Repay", 
+                   "Withdraw", "Withdraw", "Withdraw", "Withdraw", "Withdraw"), 
+    OutcomeEvent = c("Account Liquidated", "Deposit", "Full Repay", "Liquidation Performed", 
+                     "Repay", "Withdraw", "Account Liquidated", "Borrow", 
+                     "Liquidation Performed", "Repay", "Withdraw", 
+                     "Account Liquidated", "Borrow", "Deposit", 
+                     "Liquidation Performed", "Withdraw", "Account Liquidated", "Borrow", 
+                     "Deposit", "Liquidation Performed", "Repay"),
+    ConvergedTau_1 = c(91, 99, 95, 101, 69, 99, 
+                       90, 100, 101, 99, 93, 
+                       93, 95, 100, 101, 100, 
+                       94, 101, 99, 101, 100),
+    ConvergedRMST_1 = c(69.36, 90.98, 74.12, 100.88, 28.71, 92.59, 
+                        68.64, 91.58, 100.95, 89.70, 64.84, 
+                        72.56, 63.23, 93.72, 100.86, 93.93,
+                        75.10, 96.01, 82.13, 100.88, 93.82),
+    ConvergedTau_5 = c(20, 21, 20, 21, 17, 21, 
+                       20, 21, 21, 21, 20, 
+                       20, 20, 21, 21, 21,
+                       20, 21, 21, 21, 21),
+    ConvergedRMST_5 = c(17.43, 19.88, 17.15, 20.99, 10.24, 20.21, 
+                        17.52, 19.73, 20.99, 19.69, 15.67, 
+                        17.43, 14.99, 20.13, 20.99, 20.15,
+                        17.72, 20.26, 18.14, 20.98, 20.04),
+    ConvergedTau_10 = c(11, 11, 11, 11, 10, 11, 
+                        11, 11, 11, 11, 11, 
+                        11, 11, 11, 11, 11,
+                        11, 11, 11, 11, 11),
+    ConvergedRMST_10 = c(9.94, 10.51, 9.72, 11.00, 6.66, 10.68, 
+                         10.00, 10.43, 11.00, 10.44, 8.95, 
+                         9.90, 8.64, 10.62, 11.00, 10.62,
+                         10.05, 10.68, 9.68, 10.99, 10.57)
+  )
+  
+  return(data %>% filter(IndexEvent == str_to_title(indexEvent), OutcomeEvent ==
+                           str_to_title(outcomeEvent)) %>% pull(ConvergedRMST_5))
+}
+```
+
+### def smote_data
+
+The `smote_data` function leverages the `ROSE` package to address class imbalance in datasets by dynamically generating a balanced dataset based on oversampling and undersampling techniques. The function is designed to be flexible, allowing the user to specify the target variable (`target_var`) and an optional random seed (`seed`) for reproducibility. It validates the input dataset to ensure the target variable exists and dynamically constructs the formula for the `ROSE` function, making it adaptable to different datasets and classification tasks. By generating a balanced dataset where the minority and majority classes are better represented, this function helps mitigate bias in machine learning models and improves their classification accuracy. 
+
+```{r}
+smote_data <- function(train_data, target_var = "event", seed = 123) {
+  # library(ROSE)
+  # check if the input data contains the target variable
+  if (!target_var %in% colnames(train_data)) {
+    stop(paste("Target variable", target_var, "not found in the dataset"))
+  }
+  
+  # set the random seed (if provided)
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+  
+  # dynamic formula creation to adapt to different target variables
+  formula <- as.formula(paste(target_var, "~ ."))
+  
+  # applying ROSE Balance Data
+  train_data_balanced <- ROSE(formula, data = train_data, seed = seed)$data
+  
+  # return the balanced dataset
+  return(train_data_balanced)
+}
+```
+
+## Model Performance Evaluation and Visualization
+
+### def calculate_model_metrics
+
+The `calculate_model_metrics` function in R is designed to evaluate the performance of a binary classification model using key metrics derived from a confusion matrix. It calculates several important metrics: class accuracy (specificity), negative class accuracy (sensitivity/recall), balanced accuracy (the average of sensitivity and specificity), overall accuracy, precision, and F1 score. The function takes as input the confusion matrix, binary predictions, and the model's name, then computes these metrics and prints them out in a formatted manner. Finally, it returns a list containing all the calculated metrics for further use in performance analysis.
+
+```{r}
+calculate_model_metrics <- function(confusion_matrix, binary_predictions, model_name) {
+  TN <- confusion_matrix[1, 1] # True Negatives
+  FP <- confusion_matrix[1, 2] # False Positives
+  FN <- confusion_matrix[2, 1] # False Negatives
+  TP <- confusion_matrix[2, 2] # True Positives
+  
+  # positive Class accuracy (Specificity): TN / (TN + FP)
+  class_accuracy <- TN / (TN + FP)
+  
+  # negative 1 accuracy (Sensitivity/Recall): TP / (TP + FN)
+  negative_1_accuracy <- TP / (TP + FN)
+  
+  # balanced accuracy: Average of Sensitivity and Specificity
+  balanced_accuracy <- (class_accuracy + negative_1_accuracy) / 2
+  
+  # overall accuracy: (TP + TN) / (TP + TN + FP + FN)
+  overall_accuracy <- (TP + TN) / (TP + TN + FP + FN)
+  
+  # precision
+  precision <- TP / (TP + FP)
+  
+  # f1 score
+  f1_score <- 2 * (precision * negative_1_accuracy) / (precision + negative_1_accuracy)
+  
+  # print out all the accuracy records
+  print(paste(model_name, "model prediction accuracy:"))
+  cat("Class accuracy (Specificity):", sprintf("%.0f%%", class_accuracy * 100), "\n")
+  cat("Negative 1 accuracy (Sensitivity/Recall):", sprintf("%.0f%%", negative_1_accuracy * 100), "\n")
+  cat("Balanced accuracy:", sprintf("%.0f%%", balanced_accuracy * 100), "\n")
+  cat("Overall accuracy:", sprintf("%.0f%%", overall_accuracy * 100), "\n")
+  cat("Precision:", sprintf("%.0f%%", precision * 100), "\n")
+  cat("F1 score:", sprintf("%.0f%%", f1_score * 100), "\n")
+  
+  return (list(class_accuracy = class_accuracy,
+              negative_1_accuracy = negative_1_accuracy,
+              balanced_accuracy = balanced_accuracy,
+              overall_accuracy = overall_accuracy,
+              precision = precision,
+              f1_score = f1_score))
+}
+```
+
+### def get_dataframe
+
+The `get_dataframe` creates and returns a dataframe `metrics_dataframe` that stores various performance metrics for a specific model. The function accepts a model name (`model_name`) and a metrics object (`metrics`) as parameters, and formats the various metrics in `metrics` (such as classification accuracy, negative class accuracy, balanced accuracy, overall accuracy, precision, and F1 score) as percentages, retains them to integers, and then aggregates them into a dataframe. The final returned `metrics_dataframe` contains key performance information for each model.
+
+```{r}
+get_dataframe <- function(model_name, metrics) {
+  metrics_dataframe <- data.frame(
+    Model = model_name,
+    Class_Accuracy = sprintf("%.0f%%", metrics$class_accuracy * 100),
+    Negative_1_Accuracy = sprintf("%.0f%%", metrics$negative_1_accuracy * 100),
+    Balanced_Accuracy = sprintf("%.0f%%", metrics$balanced_accuracy * 100),
+    Overall_Accuracy = sprintf("%.0f%%", metrics$overall_accuracy * 100),
+    Precision = sprintf("%.0f%%", metrics$precision * 100),
+    F1_Score = sprintf("%.0f%%", metrics$f1_score * 100)
+  )
+  return (metrics_dataframe)
+}
+```
+
+### def combine_classification_results
+
+The `combine_classification_results` function is designed to unify performance metrics from multiple classification models into a single, cohesive dataframe. It accepts two parameters: a list of dataframes (`accuracy_dataframe_list`), each containing accuracy metrics for a different model, and a string (`data_combination`) describing the dataset combination (e.g., "Withdraw + Deposit"). The function uses `lapply` to iterate over each dataframe in the list, adding a `Data_Combination` column that records the dataset combination description for that model's metrics. Once each dataframe is labeled, `do.call(rbind, accuracy_dataframe_list)` concatenates the dataframes by rows, resulting in a single combined dataframe with all models’ metrics and an additional column indicating the dataset combination.
+
+```{r}
+combine_classification_results <- function(accuracy_dataframe_list, data_combination) {
+  # apply the data combination description to each dataframe in the list
+  accuracy_dataframe_list <- lapply(accuracy_dataframe_list, function(df) {
+    # add a new column `Data_Combination` to store the combination description
+    # this allows each dataframe to retain information about the specific data combination it
+    # represents
+    df$Data_Combination <- data_combination
+    # return the modified dataframe with the new column added
+    return(df)
+  })
+  
+  # combine all the modified dataframes into one large dataframe
+  # `do.call` applies `rbind` to all dataframes in the list, effectively stacking them by rows
+  combined_dataframe <- do.call(rbind, accuracy_dataframe_list)
+  
+  # return the combined dataframe
+  return(combined_dataframe)
+}
+```
+
+### def get_percentage
+
+The `get_percentage` function takes a dataset (`survivalDataForClassification`), along with two event labels (`indexEvent` and `outcomeEvent`), and calculates the percentage distribution of different event types within the dataset. It groups the data by the event variable, counts occurrences for each event type, and then calculates the total and corresponding percentage for each event. The function then creates a bar plot to visually display the percentage of each event type, labeling the bars with the percentage values and showing the y-axis as a percentage. The plot is titled according to the provided `indexEvent` and `outcomeEvent` labels.
+
+```{r}
+get_percentage <- function(survivalDataForClassification, indexEvent, outcomeEvent) {
+  # indexEvent and outcomeEvent is a string type
+  pctPerEvent <- survivalDataForClassification %>%
+  group_by(event) %>%
+  dplyr::summarize(numPerEvent = n()) %>%
+  mutate(total = sum(numPerEvent)) %>%
+  mutate(percentage = numPerEvent / total) %>%
+  dplyr::select(event, percentage)
+  # create a bar plot for event percentages
+  # stat = "identity": percentages used directly to draw the bar chart
+  print(ggplot(pctPerEvent, aes(x = event, y = percentage, fill = event)) +
+    geom_bar(stat = "identity") +
+    scale_y_continuous(labels = scales::percent_format()) +  # show y-axis in percentage
+    labs(title = "Percentage of Events: 'Yes' event vs 'No' event",
+         x = paste(indexEvent, "and", outcomeEvent),
+         y = "Percentage") +
+    geom_text(aes(label = scales::percent(percentage)), 
+              vjust = -0.5, size = 3.5) +  # show percentages on top of bars
+    theme_minimal())
+}
+```
+
+### def accuracy_comparison_plot
+
+The `accuracy_comparison_plot` function generates a faceted bar chart comparing the accuracy metrics across multiple classification models. It accepts a list of lists (`metrics_list`), where each sublist contains a model's metrics and its name, enabling flexible scaling to accommodate any number of models. The function iterates through each model’s metrics, constructing a consolidated dataframe that includes metrics like class accuracy, negative class accuracy, balanced accuracy, overall accuracy, precision, and F1 score for each model. Using `ggplot2`, it melts this data for visualization and creates a bar plot with facets for each metric, complete with percentage labels on the bars. 
+
+```{r}
+accuracy_comparison_plot <- function(metrics_list) {
+  # initialize an empty data frame to store the metrics for all models
+  accuracy_table <- data.frame()
+  
+  # loop over each element in metrics_list (each element is a list containing metrics and model name)
+  for (metrics in metrics_list) {
+    # Extract metrics and model name from each "tuple"
+    model_metrics <- metrics[[1]]
+    model_name <- metrics[[2]]
+    
+    # create a temporary dataframe for this model
+    temp_df <- data.frame(
+      Model = model_name,
+      ClassA = model_metrics$class_accuracy,
+      Negative_1A = model_metrics$negative_1_accuracy,
+      BalancedA = model_metrics$balanced_accuracy,
+      OverallA = model_metrics$overall_accuracy,
+      Precision = model_metrics$precision,
+      F1_score = model_metrics$f1_score
+    )
+    
+    # append the temporary dataframe to the main accuracy_table
+    accuracy_table <- rbind(accuracy_table, temp_df)
+  }
+  
+  # melt the dataframe into long format for plotting
+  accuracy_results_melted <- reshape2::melt(accuracy_table, id.vars = "Model")
+  
+  # generate the plot with faceted bars
+  ggplot(accuracy_results_melted, aes(x = Model, y = value, fill = Model)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    facet_wrap(~ variable, scales = "free_y") +  # Facet by each metric
+    labs(title = "Comparison of Accuracy Metrics Across Models",
+         x = "Model",
+         y = "Value") +
+    # add percentage labels on top of each bar
+    geom_text(aes(label = scales::percent(value, accuracy = 0.1)),
+              position = position_dodge(width = 0.9),
+              vjust = 0.5, size = 2.0) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+```
+
+### def specific_accuracy_statistics
+
+The `specific_accuracy_statistics` function generates a summary DataFrame containing specified accuracy metrics for various classification models. It takes three parameters: `event_pair` (a string describing the event or dataset, which is added as the first column), `accuracy_type` (a string specifying the accuracy metric to extract, such as "class_accuracy" or "f1_score"), and `metrics_list` (a list of lists where each sub-list contains accuracy data and a model name). The function traverses `metrics_list` and dynamically extracts the specified accuracy metric, converting it to a percentage (multiplied by 100) and rounding to one decimal place for each model. If the requested accuracy type is invalid, it throws an error. Finally, it organizes the extracted data into a DataFrame, with `accuracy_type` in the first column and each model's results as additional columns, and returns this structured DataFrame.
+
+```{r}
+specific_accuracy_statistics <- function(event_pair, accuracy_type, metrics_list) {
+  # initialize the result list
+  results <- list()
+  
+  # add accuracy_type as the left front corner and event_pair is the first column of the data
+  results[[accuracy_type]] <- event_pair
+  
+  # traverse metrics_list and extract the specified accuracy type for each model
+  for (metric_item in metrics_list) {
+    # get accuracy data
+    accuracy_data <- metric_item[[1]]
+    # get the model name
+    model_name <- metric_item[[2]]
+    if (accuracy_type == "class_accuracy") {
+      results[[model_name]] <- round(accuracy_data$class_accuracy * 100, 1)
+    }
+    else if (accuracy_type == "negative_1_accuracy") {
+      results[[model_name]] <- round(accuracy_data$negative_1_accuracy * 100, 1)
+    }
+    else if (accuracy_type == "balanced_accuracy") {
+      results[[model_name]] <- round(accuracy_data$balanced_accuracy * 100, 1)
+    }
+    else if (accuracy_type == "overall_accuracy") {
+      results[[model_name]] <- round(accuracy_data$overall_accuracy * 100, 1)
+    }
+    else if (accuracy_type == "precision") {
+      results[[model_name]] <- round(accuracy_data$precision * 100, 1)
+    }
+    else if (accuracy_type == "f1_score") {
+      results[[model_name]] <- round(accuracy_data$f1_score * 100, 1)
+    }
+    else {
+      # An error message is displayed if the specified accuracy_type does not exist.
+      stop(paste("Invalid accuracy type:", accuracy_type))
+    }
+  }
+  
+  # convert the result to a DataFrame and set row.names = NULL
+  df <- as.data.frame(results, row.names = NULL)
+  return(df)
+}
+```
+
+### def combine_accuracy_dataframes
+
+The `combine_accuracy_dataframes` function takes a list of data frames as input and combines them into a single data frame by stacking the rows. It first checks if the input is a valid list and throws an error if not. Then, using `do.call` and `rbind`, it merges all the data frames in the list row-wise. The function is designed to handle multiple data frames efficiently and returns a consolidated data frame for further analysis.
+
+```{r}
+combine_accuracy_dataframes <- function(df_list) {
+  # check if the input is a list
+  if (!is.list(df_list)) {
+    stop("Input must be a list of data.frames.")
+  }
+  
+  # Use do.call and rbind to combine all data.frames in a list.
+  combined_df <- do.call(rbind, df_list)
+  
+  # returns the merged data.frame
+  return(combined_df)
+}
+```
+
+## Classification Model Development and Optimization
+
+### def logistic_regression
+
+This function implements a logistic regression classifier using Lasso regularization for binary classification. It first loads the required packages (`glmnet` for logistic regression with regularization and `data.table` for efficient data handling). The function scales the numeric features in both training and testing datasets and converts them to matrix format for compatibility with the `glmnet` package. Logistic regression with Lasso regularization is then applied, and predictions are made on the test set based on a fixed regularization parameter (`lambda = 0.01`). The function converts predicted probabilities into binary class labels, creates a confusion matrix to compare predictions with actual outcomes, and evaluates the model's performance through various metrics like accuracy, precision, recall, and F1 score. These metrics are summarized into a dataframe for easy visualization and returned.
+
+```{r}
+logistic_regression <- function(train_data, test_data) {
+  # library(glmnet)  # load glmnet package for logistic regression with regularization
+  # library(data.table)  # load data.table for efficient data handling
+  # ensure train_data and test_data are in the data.table format for fast operations
+  setDT(train_data)
+  setDT(test_data)
+  # identify numeric features in the dataset, and scale them to have mean = 0 and standard
+  # deviation = 1
+  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
+  # scale numeric columns in train set
+  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  # scale numeric columns in test set
+  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  # convert the training and testing datasets to matrix format as required by the glmnet package
+  # model matrix function excludes the intercept (-1) and converts data for glmnet
+  x_train <- model.matrix(event ~ . - 1, data = train_data)  
+  y_train <- train_data$event  # extract the target variable from the training data
+  # convert test set features to matrix format
+  x_test <- model.matrix(event ~ . - 1, data = test_data)  
+  # apply logistic regression with Lasso regularization (alpha = 1 means Lasso)
+  # 'family = binomial' specifies logistic regression for binary classification
+  logistic_regression_classifier <- glmnet(x_train, y_train, family = "binomial", alpha = 1)
+  # predict the probability of the event (outcome) on the test set
+  # use a fixed regularization parameter lambda = 0.01 for prediction
+  predict_probabilities_lr <- 
+    predict(logistic_regression_classifier, s = 0.01, newx = x_test, type = "response")
+  # convert the predicted probabilities into binary class labels (yes or no)
+  binary_prediction_lr <- ifelse(predict_probabilities_lr > 0.5, "yes", "no")
+  # create a confusion matrix to compare predicted vs. actual outcomes in the test set
+  confusion_matrix_lr <- table(Predicted = binary_prediction_lr, Actual = test_data$event)
+  # evaluate model performance by calculating metrics such as accuracy, precision, recall, etc.
+  metrics_lr <- 
+    calculate_model_metrics(confusion_matrix_lr, predict_probabilities_lr, "Logistic regression")
+  # create a dataframe with the desired structure
+  metrics_lr_dataframe = get_dataframe("Logistic Regression", metrics_lr)
+  return (list(metrics_lr_dataframe = metrics_lr_dataframe, metrics_lr = metrics_lr))
+}
+```
+
+### def decision_tree
+
+This function implements a decision tree classifier for binary classification using the `rpart` package. It trains a decision tree model on the training dataset with hyperparameter tuning, including a complexity parameter for pruning, a maximum tree depth of 30, and a minimum split requirement of 20 observations per node. After training, the function predicts class labels on the testing dataset and creates a confusion matrix to evaluate the model's performance. Various metrics, such as class accuracy, balanced accuracy, precision, and F1 score, are calculated using the `calculate_model_metrics` function and presented in a structured dataframe. The metrics dataframe is printed and returned as part of the function output.
+
+```{r}
+decision_tree <- function(train_data, test_data) {
+  # library(rpart)
+  # train the decision tree model with hyperparameter tuning
+  decision_tree_classifier <- rpart(
+    event ~ .,
+    data = train_data,
+    method = "class",
+    control = rpart.control(
+      # complexity parameter for pruning
+      cp = 0.01,
+      # maximum depth of the tree
+      maxdepth = 30,
+      # minimum number of observations needed to split a node
+      minsplit = 20
+    )
+  )
+  # predict on the testing dataset
+  predict_probabilities_dt <- predict(decision_tree_classifier, test_data, type = "class")
+  # confusion matrix and metrics
+  confusion_matrix_dt <- table(Predicted = predict_probabilities_dt, Actual = test_data$event)
+  metrics_dt <- calculate_model_metrics(confusion_matrix_dt, predict_probabilities_dt, 
+                                        "Decision tree")
+  # create a dataframe with the desired structure
+  metrics_dt_dataframe = get_dataframe("Decision Tree", metrics_dt)
+  return (list(metrics_dt_dataframe = metrics_dt_dataframe, metrics_dt = metrics_dt))
+}
+```
+
+### def random_forest
+
+The `random_forest` function trains a Random Forest classification model on the provided training data after preparing it by removing high-cardinality categorical columns (those with more than 53 unique levels), which could hinder model performance. The function then optimizes the model with hyperparameters, specifically tuning the number of trees (`ntree`) and the `mtry` parameter for optimal feature selection. After training, it predicts event probabilities on the testing data, generates a confusion matrix to assess prediction accuracy, and calculates relevant model performance metrics. 
+
+```{r}
+random_forest <- function(train_data, test_data) {
+  # identify and remove high-cardinality categorical columns from both datasets
+  cat_columns <- names(train_data)[sapply(train_data, is.factor)]
+  for (col in cat_columns) {
+    num_levels <- length(unique(train_data[[col]]))
+    if (num_levels > 53) {
+      train_data <- train_data %>% select(-all_of(col))
+      test_data <- test_data %>% select(-all_of(col))
+    }
+  }
+
+  # ensure levels in test_data match train_data for all categorical variables
+  cat_columns <- names(train_data)[sapply(train_data, is.factor)]
+  for (col in cat_columns) {
+    test_data[[col]] <- factor(test_data[[col]], levels = levels(train_data[[col]]))
+  }
+
+  # train the Random Forest model
+  random_forest_classifier <- randomForest(
+    event ~ ., 
+    data = train_data, 
+    ntree = 500, 
+    mtry = floor(sqrt(ncol(train_data) - 1)), 
+    importance = TRUE
+  )
+
+  # predict probabilities on the testing dataset
+  predict_probabilities_rdf <- predict(random_forest_classifier, test_data, type = "response")
+
+  # create confusion matrix and calculate metrics
+  confusion_matrix_rdf <- table(Predicted = predict_probabilities_rdf, Actual = test_data$event)
+  metrics_rdf <- calculate_model_metrics(confusion_matrix_rdf, predict_probabilities_rdf, 
+                                         "Random forest")
+
+  # create a dataframe with the desired structure
+  metrics_rdf_dataframe <- get_dataframe("Random Forest", metrics_rdf)
+
+  return (list(metrics_rdf_dataframe = metrics_rdf_dataframe, metrics_rdf = metrics_rdf))
+}
+```
+
+### def KNN
+
+(KNN will not be included in the latest pipeline due to its excessively high processing time for new datasets, making it unsuitable for the latest requirements. While scaling and normalization can improve its adaptability to certain datasets, it remains impractical for our current needs. As a result, we have decided to exclude KNN from consideration in the updated pipeline.)
+
+This `KNN` function implements a K-nearest neighbor-based classification model for classifying and predicting the test data set. The function first extracts features and target variables from the training and test sets, and ensures that the feature matrix contains only numerical data. To improve model performance, the feature values are standardized (zero mean, unit variance) to avoid the impact of feature range differences on distance calculations. Subsequently, the function uses the `knn` method to classify and predict the test data, and generates a confusion matrix based on the predicted results and actual labels to calculate model performance indicators. Finally, the model's evaluation indicators are formatted as a data frame for further analysis and comparison.
+
+```{r}
+KNN <- function(train_data, test_data, k = 5) {
+  # load necessary library for KNN
+  # library(class)
+  
+  # separate the features and target variable in both training and testing datasets
+  train_features <- train_data[, -which(names(train_data) == "event"), with = FALSE]
+  test_features <- test_data[, -which(names(train_data) == "event"), with = FALSE]
+  
+  # ensure target variable is correctly referenced as the event column
+  train_labels <- train_data$event
+  
+  # ensure that the feature matrices only contain numeric data (for KNN compatibility)
+  train_features <- as.data.frame(lapply(train_features, as.numeric))
+  test_features <- as.data.frame(lapply(test_features, as.numeric))
+  
+  # perform feature scaling (standardization: zero mean, unit variance)
+  train_features <- as.data.frame(scale(train_features))
+  test_features <- as.data.frame(scale(test_features))
+  
+  # ensure that the lengths of train_features and train_labels match
+  if (nrow(train_features) != length(train_labels)) {
+    stop("'train' and 'class' have different lengths")
+  }
+  
+  # use the KNN model to predict on the testing dataset
+  predict_probabilities_knn <- knn(train = train_features, test = test_features, 
+                                   cl = train_labels, k = k)
+  
+  # confusion matrix and metrics
+  confusion_matrix_knn <- table(Predicted = predict_probabilities_knn, Actual = test_data$event)
+  metrics_knn <- calculate_model_metrics(confusion_matrix_knn, predict_probabilities_knn, "KNN")
+  
+  # create a dataframe with the desired structure
+  metrics_knn_dataframe <- get_dataframe("KNN", metrics_knn)
+  
+  return(list(metrics_knn_dataframe = metrics_knn_dataframe, metrics_knn = metrics_knn))
+}
+```
+
+### def Naive_bayes (@Author: Haolin Luo)
+
+(Naive Bayes, relying on the assumption of feature independence, struggles to capture the intricate relationships and dependencies between features that are common in survival data. This simplification leads to inaccurate probability estimations and poor classification performance, especially in scenarios with overlapping or correlated features. Additionally, the model's inability to adjust effectively to imbalanced datasets results in low balanced accuracy and F1 scores, as it tends to overemphasize the majority class while failing to adequately recognize minority class instances. These limitations make Naive Bayes unsuitable for predicting survival data outcomes.)
+
+The `Naive_bayes` function implements a Naive Bayes classifier for binary classification tasks. It begins by converting the target column (`event`) in the training and testing datasets to factors to ensure proper model functionality. The function trains a Naive Bayes model on the training dataset using all features except the target column. Predictions and prediction probabilities are then generated for the test set, ensuring consistency in factor levels between predicted and actual labels. A confusion matrix is created to evaluate the model’s performance, and key metrics such as accuracy, precision, recall, and F1 score are calculated using the `calculate_model_metrics` function. The metrics are formatted into a structured dataframe.
+
+```{r}
+Naive_bayes <- function(train_data, test_data) {
+  # library(e1071)
+  target_column = "event"
+  # Convert the target column to a factor if it's not already
+  train_data[[target_column]] <- as.factor(train_data[[target_column]])
+  test_labels <- as.factor(test_data[[target_column]])
+  
+  # Remove the target column from the test set for prediction
+  test_features <- test_data %>%
+    select(-all_of(target_column))
+  
+  # Train Naive Bayes model
+  nb_model <- naiveBayes(as.formula(paste(target_column, "~ .")), data = train_data)
+  
+  # Make predictions on the test set
+  predictions <- predict(nb_model, test_features)
+  
+  # Get prediction probabilities
+  prediction_probabilities <- predict(nb_model, test_features, type = "raw")
+  
+  # Ensure both predicted and actual labels are factors with the same levels
+  predictions <- factor(predictions, levels = levels(test_labels))
+  
+  # Evaluate model performance with a confusion matrix
+  conf_matrix <- table(Predicted = predictions, Actual = test_labels)
+  
+  metrics <- calculate_model_metrics(conf_matrix, prediction_probabilities, 
+                                     "Naive Bayes")
+  # create a dataframe with the desired structure
+  metrics_dataframe = get_dataframe("Naive Bayes", metrics)
+  # each classification models need to return these two variables
+  return (list(metrics_dataframe = metrics_dataframe, metrics = metrics))
+}
+```

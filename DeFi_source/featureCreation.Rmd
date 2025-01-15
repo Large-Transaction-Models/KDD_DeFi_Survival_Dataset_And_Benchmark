@@ -1,0 +1,113 @@
+```{r}
+library(tidyr)
+library(dplyr)
+library(readr)
+
+select <- dplyr::select
+rename <- dplyr::rename
+summarize <- dplyr::summarize
+group_by <- dplyr::group_by
+
+## Helper functions
+not_all_na <- function(x) any(!is.na(x))
+`%notin%` <- Negate(`%in%`)
+```
+
+
+The purpose of this notebook is to take raw transaction data and generate features at each transaction that we think could be useful covariates for survival analysis. 
+```{r}
+# Load the transaction data:
+rawTransactions <- read_rds("/data/IDEA_DeFi_Research/Data/Lending_Protocols/Aave/V2/Mainnet/transactions.rds") 
+```
+
+```{r}
+# This might seem like a silly line of code, but since it takes some time to load the RDS of rawTransactions, let's just make a copy of it and work with 
+# the copy. that way if we mess things up we can always just recopy the dataframe without needing to reload it:
+transactions <- rawTransactions 
+
+# For ease of interpretation, we are going to rename the 'onBehalfOf' column to be 'user', since the 'onBehalfOf' column
+# represents the address of the account that is actually being affected by the transaction.
+transactions <- transactions %>%
+  select(-user) %>%
+  rename(user = onBehalfOf) %>%
+  select(-userAlias, -onBehalfOfAlias)
+
+
+
+liquidations <- rawTransactions %>%
+  filter(type == "liquidation") %>%
+  rename(liquidatee = user)
+
+accountLiquidatedsCollateral <- liquidations %>%
+  mutate(user = liquidatee) %>%
+  mutate(reserve = collateralReserve) %>%
+  mutate(amount = -collateralAmount,
+         amountUSD = -collateralAmountUSD,
+         amountETH = -collateralAmountETH) %>%
+  mutate(priceInUSD = amountUSD / amount)
+
+```
+
+# User-Reserve features:
+
+One variety of feature we can engineer for each transaction has to do with the user-reserve account balances. 
+Any time a user interacts with a currency in Aave, they must have some deposit balance and/or some borrow balance.
+Can we create features at the transaction level that keep track of these?
+
+## Supply-level features:
+ 
+Let's start by trying to calculate each user's supply (deposited) balance of reserves whenever they make a transaction with said reserve:
+```{r}
+
+deposits <- transactions %>%
+  filter(type == "deposit") %>%
+  mutate(priceInUSD = amountUSD / amount)
+
+withdraws <- transactions %>%
+  filter(type == "withdraw")%>%
+  mutate(amount = -amount,
+         amountUSD = -amountUSD,
+         amountETH = -amountETH,
+         priceInUSD = amountUSD / amount)
+
+supplyTransactions <- bind_rows(deposits, withdraws, accountLiquidatedsCollateral) %>%
+  select(id, user, timestamp, reserve, amount, amountUSD, amountETH, type, priceInUSD)
+
+supplyTransactions <- supplyTransactions %>%
+  arrange(timestamp) %>%
+  group_by(user, reserve)
+
+# Compute a running balance of each user-reserve combination's deposited amount, where withdraws and accountLiquidateds
+# count as negative amounts.
+
+supplyTransactions <- supplyTransactions %>%
+  mutate(reserveSupply = cumsum(amount),
+         reserveSupplyUSD = reserveSupply * priceInUSD,
+         reserveSupplyETH = cumsum(amountETH))
+
+
+```
+
+
+```{r}
+temp <- supplyTransactions %>%
+  filter(user == "0x9a90affd5fd50561a98a6fb4358f941a131ac592",
+         reserve == "USDC")
+```
+
+
+```{r}
+supplyTransactionsMinimized <- supplyTransactions %>%
+  ungroup() %>%
+  select(id, reserveSupply, reserveSupplyETH, reserveSupplyUSD)
+
+# We want to add the created features to our transactions:
+transactionsWithNewFeatures <- transactions %>%
+  left_join(supplyTransactionsMinimized, by = "id")
+```
+
+After we've created whatever features we could come up with, we need to be sure to save the bolstered transactions to the cluster so they can actually be used later:
+```{r}
+# Assuming the transactions with new features are in a dataframe called "transactionsWithNewFeatures":
+write_rds(transactionsWithNewFeatures, "/data/IDEA_DeFi_Research/Data/Lending_Protocols/Aave/V2/Mainnet/Experimental/transactionsWithNewFeatures.rds")
+```
