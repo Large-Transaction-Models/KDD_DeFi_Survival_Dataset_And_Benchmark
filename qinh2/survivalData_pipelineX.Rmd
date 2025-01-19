@@ -1,0 +1,1203 @@
+---
+title: "DMLR DeFi-LTM - Survival Data Pipeline"
+author: "Hanzhen Qin - qinh2"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_notebook: default
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: yes
+    theme: united
+---
+
+```{r, include=FALSE}
+# This code will install required packages if they are not already installed
+# ALWAYS INSTALL YOUR PACKAGES LIKE THIS!
+if (!require("rmarkdown")) {
+   install.packages("rmarkdown")
+   library(rmarkdown)
+}
+if (!require("tidyverse")) {
+   install.packages("tidyverse")
+   library(tidyverse)
+}
+if (!require("stringr")) {
+   install.packages("stringr")
+   library(stringr)
+}
+if (!require("ggbiplot")) {
+   install.packages("ggbiplot")
+   library(ggbiplot)
+}
+if (!require("pheatmap")) {
+   install.packages("pheatmap")
+   library(pheatmap)
+}
+if (!require("randomForest")) {
+   install.packages("randomForest")
+   library(randomForest)
+}
+if (!require("caret")) {
+   install.packages("caret")
+   library(caret)
+}
+if (!require("survival")) {
+   install.packages("survival")
+   library(survival)
+}
+if (!require("survminer")) {
+   install.packages("survminer")
+   library(survminer)
+}
+if (!require("ggplot2")) {
+   install.packages("ggplot2")
+   library(ggplot2)
+}
+if (!require("kableExtra")) {
+   install.packages("kableExtra")
+   library(kableExtra)
+}
+if (!require("rpart")) {
+   install.packages("rpart")
+   library(rpart)
+}
+if (!require("glmnet")) {
+   install.packages("glmnet")
+   library(glmnet)
+}
+if (!require("data.table")) {
+   install.packages("data.table")
+   library(data.table)
+}
+if (!require("class")) {
+   install.packages("class")
+   library(class)
+}
+if (!require("reshape2")) {
+   install.packages("reshape2")
+   library(reshape2)
+}
+if (!require("pander")) {
+   install.packages("pander")
+   library(pander)
+}
+if (!require("readr")) {
+   install.packages("readr")
+   library(readr)
+}
+if (!require("dplyr")) {
+   install.packages("dplyr")
+   library(dplyr)
+}
+if (!require("e1071")) {
+  install.packages("e1071")
+  library(e1071)
+}
+if (!require("ROSE")) {
+   install.packages("ROSE")
+   library(ROSE)
+}
+```
+
+# Survival Data Pipeline
+
+* Project name: DMLR DeFi-LTM
+
+## Section Preview
+
+This section demonstrates the use of all classification models in the pipeline to predict events across the entire dataset. The process consistently involves altering the dataset and applying each classification model to make predictions, ultimately producing a comprehensive accuracy dataframe for each model. So you can just skip the `Comprehensive Evaluation Of Classification Models Across Data Combinations` section to avoid the repeated steps.
+
+For this section, there are five parts:
+
+  * First Data Combination With Detailed Description
+
+  * Comprehensive Evaluation Of Classification Models Across Data Combinations (pass this section)
+  
+  * Record Data Set Without "Yes" Label Data
+  
+  * Classification Model Performance For All Data Combinations - Findings
+  
+  * Generating Dataframe For Specified Accuracy
+
+To understand the overall process of the classification model, start with the `First Data Combination With Detailed Description` section. Next, review the `Record Data Set Without "Yes" Label Data` section to examine datasets that could not be predicted, as indicated by the percentage bar graph. Finally, explore the `Classification Model Performance For All Data Combinations` and `Generating Dataframe For Specified Accuracy` sections for a comprehensive analysis of performance dataframes. The `Classification Model Performance For All Data Combinations` is the most important section with the `Findings` about the comparison between all the classification models.
+
+## First Data Combination With Detailed Description
+
+```{r}
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline
+       /data_preprocessing.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline
+       /model_evaluation_visual.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline
+       /classification_models.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline
+       /get_classification_cutoff.R")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "deposit"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+# If you want to check the train and test data, you can run the following codes.
+# cat("Train data:\n")
+# summary(train)
+# cat("Test data:\n")
+# summary(test)
+```
+
+Using the `get_classification_cutoff` funtion to get the optimal timeDiff, then we will call the `data_processing` function above to get all the training data and test data.
+
+```{r}
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+If the ratio of "No" labels to "Yes" labels in the dataset is significantly imbalanced, we can utilize the `smote_data` function to generate a new, more balanced dataset. This balanced dataset ensures that both classes are better represented, helping to mitigate the bias introduced by class imbalance and ultimately improving the accuracy and reliability of our classification model.
+
+```{r}
+train_data <- smote_data(train_data)
+```
+
+Then you can check the updated balanced version of train data.
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+After obtaining the train and test data, we will apply all the classification models to evaluate the relationship between these events.
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+pander(accuracy_lr_dataframe)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+pander(accuracy_dt_dataframe)
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+pander(accuracy_nb_dataframe)
+```
+
+```{r}
+# compare all the classification models
+metrics_list_BD <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_BD)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BD <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BD <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_BD <- combine_classification_results(accuracy_dataframe_list_BD, data_name_BD)
+
+# display the combined dataframe
+# print(combined_results)
+pander(combined_results_BD, caption = "Classification Model Performance")
+```
+
+## Comprehensive Evaluation Of Classification Models Across Data Combinations (pass this section)
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "repay"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_BR <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_BR)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BR <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BR <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_BR <- combine_classification_results(accuracy_dataframe_list_BR, data_name_BR)
+
+# display the combined dataframe
+pander(combined_results_BR, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "withdraw"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_BW <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_BW)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BW <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BW <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_BW <- combine_classification_results(accuracy_dataframe_list_BW, data_name_BW)
+
+# display the combined dataframe
+pander(combined_results_BW, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "account liquidated"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_BAL <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_BAL)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BAL <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BAL <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_BAL <- combine_classification_results(accuracy_dataframe_list_BAL, data_name_BAL)
+
+# display the combined dataframe
+pander(combined_results_BAL, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "deposit"
+outcomeEvent = "borrow"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_DB <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_DB)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_DB <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_DB <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_DB <- combine_classification_results(accuracy_dataframe_list_DB, data_name_DB)
+
+# display the combined dataframe
+pander(combined_results_DB, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "deposit"
+outcomeEvent = "repay"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_DR <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_DR)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_DR <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_DR <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_DR <- combine_classification_results(accuracy_dataframe_list_DR, data_name_DR)
+
+# display the combined dataframe
+pander(combined_results_DR, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "deposit"
+outcomeEvent = "withdraw"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_DW <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_DW)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_DW <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_DW <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_DW <- combine_classification_results(accuracy_dataframe_list_DW, data_name_DW)
+
+# display the combined dataframe
+pander(combined_results_DW, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "repay"
+outcomeEvent = "borrow"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_RB <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_RB)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_RB <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_RB <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_RB <- combine_classification_results(accuracy_dataframe_list_RB, data_name_RB)
+
+# display the combined dataframe
+pander(combined_results_RB, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "repay"
+outcomeEvent = "deposit"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_RD <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_RD)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_RD <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_RD <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_RD <- combine_classification_results(accuracy_dataframe_list_RD, data_name_RD)
+
+# display the combined dataframe
+pander(combined_results_RD, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "repay"
+outcomeEvent = "withdraw"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_RW <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_RW)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_RW <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_RW <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_RW <- combine_classification_results(accuracy_dataframe_list_RW, data_name_RW)
+
+# display the combined dataframe
+pander(combined_results_RW, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "repay"
+outcomeEvent = "account liquidated"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_RAL <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_RAL)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_RAL <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_RAL <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_RAL <- combine_classification_results(accuracy_dataframe_list_RAL, data_name_RAL)
+
+# display the combined dataframe
+pander(combined_results_RAL, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "withdraw"
+outcomeEvent = "borrow"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_WB <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_WB)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_WB <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_WB <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_WB <- combine_classification_results(accuracy_dataframe_list_WB, data_name_WB)
+
+# display the combined dataframe
+pander(combined_results_WB, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "withdraw"
+outcomeEvent = "repay"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_WR <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_WR)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_WR <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_WR <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_WR <- combine_classification_results(accuracy_dataframe_list_WR, data_name_WR)
+
+# display the combined dataframe
+pander(combined_results_WR, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "withdraw"
+outcomeEvent = "deposit"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+# compare all the classification models
+metrics_list_WD <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes")
+)
+accuracy_comparison_plot(metrics_list_WD)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_WD <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_WD <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe)
+combined_results_WD <- combine_classification_results(accuracy_dataframe_list_WD, data_name_WD)
+
+# display the combined dataframe
+pander(combined_results_WD, caption = "Classification Model Performance")
+```
+
+## Record Data Set Without "Yes" Label Data
+
+In these data combinations where
+
+ * `indexEvent = "deposit, withdraw"` and `outcomeEvent = "account liquidated"`
+ 
+ * `indexEvent = "borrow, deposit, repay, withdraw"` and `outcomeEvent = "liquidation performed"`
+ 
+the "Yes" label constitutes 0% of the data. Therefore, classification and prediction for this data combination are unnecessary, and the use of SMOTE technology is not needed anymore.
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "deposit"
+outcomeEvent = "account liquidated"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "withdraw"
+outcomeEvent = "account liquidated"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "liquidation performed"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "deposit"
+outcomeEvent = "liquidation performed"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "repay"
+outcomeEvent = "liquidation performed"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "withdraw"
+outcomeEvent = "liquidation performed"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+## Classification Model Performance For All Data Combinations
+
+After we run all the data combinations, we can use the `combine_accuracy_dataframes` to combine all the classification models' performance into one dataframe.
+
+```{r}
+combined_classification_results <- combine_accuracy_dataframes(
+  list(combined_results_BAL, combined_results_BD, combined_results_BR, combined_results_BW, 
+       combined_results_DB, combined_results_DR, combined_results_DW, combined_results_RAL, 
+       combined_results_RB, combined_results_RD, combined_results_RW, combined_results_WB, 
+       combined_results_WR, combined_results_WD))
+pander(combined_classification_results, caption = "Classification Model Performance for all data")
+```
+
+## Generating Dataframe For Specified Accuracy
+
+This section is only for a special need, not required for the whole pipeline workflow!!!
+
+In this section, the final output is a combined data frame that consolidates performance metrics for multiple classification models across different data scenarios. Each row represents a specific scenario (e.g., "borrow + withdraw" or "borrow + repay"), while the columns display the selected performance metric (e.g., "balanced_accuracy") and the corresponding values for each classification model (e.g., Logistic Regression, Decision Tree). 
+
+```{r}
+ba_accuracy_dataframe_BAL <- specific_accuracy_statistics(data_name_BAL, "balanced_accuracy", 
+                                                      metrics_list_BAL)
+ba_accuracy_dataframe_BD <- specific_accuracy_statistics(data_name_BD, "balanced_accuracy", 
+                                                      metrics_list_BD)
+ba_accuracy_dataframe_BR <- specific_accuracy_statistics(data_name_BR, "balanced_accuracy", 
+                                                      metrics_list_BR)
+ba_accuracy_dataframe_BW <- specific_accuracy_statistics(data_name_BW, "balanced_accuracy", 
+                                                      metrics_list_BW)
+ba_accuracy_dataframe_DB <- specific_accuracy_statistics(data_name_DB, "balanced_accuracy", 
+                                                      metrics_list_DB)
+ba_accuracy_dataframe_DR <- specific_accuracy_statistics(data_name_DR, "balanced_accuracy", 
+                                                      metrics_list_DR)
+ba_accuracy_dataframe_DW <- specific_accuracy_statistics(data_name_DW, "balanced_accuracy", 
+                                                      metrics_list_DW)
+ba_accuracy_dataframe_RAL <- specific_accuracy_statistics(data_name_RAL, "balanced_accuracy", 
+                                                      metrics_list_RAL)
+ba_accuracy_dataframe_RB <- specific_accuracy_statistics(data_name_RB, "balanced_accuracy", 
+                                                      metrics_list_RB)
+ba_accuracy_dataframe_RD <- specific_accuracy_statistics(data_name_RD, "balanced_accuracy", 
+                                                      metrics_list_RD)
+ba_accuracy_dataframe_RW <- specific_accuracy_statistics(data_name_RW, "balanced_accuracy", 
+                                                      metrics_list_RW)
+ba_accuracy_dataframe_WB <- specific_accuracy_statistics(data_name_WB, "balanced_accuracy", 
+                                                      metrics_list_WB)
+ba_accuracy_dataframe_WR <- specific_accuracy_statistics(data_name_WR, "balanced_accuracy", 
+                                                      metrics_list_WR)
+ba_accuracy_dataframe_WD <- specific_accuracy_statistics(data_name_WD, "balanced_accuracy", 
+                                                      metrics_list_WD)                                                    
+combined_accuracy_dataframe <- combine_accuracy_dataframes(
+  list(ba_accuracy_dataframe_BAL, ba_accuracy_dataframe_BD, ba_accuracy_dataframe_BR, 
+       ba_accuracy_dataframe_BW, ba_accuracy_dataframe_DB, ba_accuracy_dataframe_DR, 
+       ba_accuracy_dataframe_DW, ba_accuracy_dataframe_RAL, ba_accuracy_dataframe_RB, 
+       ba_accuracy_dataframe_RD, ba_accuracy_dataframe_RW, ba_accuracy_dataframe_WB, 
+       ba_accuracy_dataframe_WR, ba_accuracy_dataframe_WD))
+pander(combined_accuracy_dataframe, caption = "Combined accuracy dataframe")
+```

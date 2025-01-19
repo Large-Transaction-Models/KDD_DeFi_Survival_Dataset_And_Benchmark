@@ -142,15 +142,13 @@ get_classification_cutoff <- function(indexEvent, outcomeEvent){
   # Create the dataframe
   data <- data.frame(
     IndexEvent = c("Borrow", "Borrow", "Borrow", "Borrow", "Borrow", "Borrow", 
-                   "Deposit", "Deposit", "Deposit", "Deposit", "Deposit", 
-                   "Repay", "Repay", "Repay", "Repay", "Repay", 
-                   "Withdraw", "Withdraw", "Withdraw", "Withdraw", "Withdraw"), 
-    OutcomeEvent = c("Account Liquidated", "Deposit", "Full Repay", "Liquidation Performed", 
-                     "Repay", "Withdraw", "Account Liquidated", "Borrow", 
-                     "Liquidation Performed", "Repay", "Withdraw", 
-                     "Account Liquidated", "Borrow", "Deposit", 
-                     "Liquidation Performed", "Withdraw", "Account Liquidated", "Borrow", 
-                     "Deposit", "Liquidation Performed", "Repay"),
+                   "Deposit", "Deposit", "Deposit", "Deposit", "Deposit",
+                   "Repay", "Repay", "Repay", "Repay", "Repay",
+                   "Withdraw", "Withdraw", "Withdraw", "Withdraw", "Withdraw"),
+    OutcomeEvent = c("Account Liquidated", "Deposit", "Full Repay", "Liquidation Performed", "Repay", "Withdraw",
+                     "Account Liquidated", "Borrow", "Liquidation Performed", "Repay", "Withdraw",
+                     "Account Liquidated", "Borrow", "Deposit", "Liquidation Performed", "Withdraw",
+                     "Account Liquidated", "Borrow", "Deposit", "Liquidation Performed", "Repay"),
     ConvergedTau_1 = c(91, 99, 95, 101, 69, 99, 
                        90, 100, 101, 99, 93, 
                        93, 95, 100, 101, 100, 
@@ -177,8 +175,9 @@ get_classification_cutoff <- function(indexEvent, outcomeEvent){
                          10.05, 10.68, 9.68, 10.99, 10.57)
   )
   
-  return(data %>% filter(IndexEvent == str_to_title(indexEvent), OutcomeEvent ==
-                           str_to_title(outcomeEvent)) %>% pull(ConvergedRMST_5))
+  
+  return(data %>% filter(IndexEvent == str_to_title(indexEvent), OutcomeEvent == str_to_title(outcomeEvent)) 
+         %>% pull(ConvergedRMST_5))
 }
 ```
 
