@@ -6,7 +6,7 @@ library(tidyr)
 library(ROSE)
 
 get_train_test_data <- function(indexEvent, outcomeEvent) {
-  source("~/DAR-DeFi-LTM-F24/DeFi_source/dataLoader.R")
+  source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/dataLoader.R")
 }
 
 data_processing <- function(survivalData, set_timeDiff) {

@@ -1,6 +1,6 @@
 ---
 title: "DeFi Survival and LTM Project Notebook (qinh2):"
-subtitle: "DEFI - Survival Data Pipeline (Fall 2024)"
+subtitle: "DEFI - Survival Data Pipeline"
 author: "Hanzhen Qin(qinh2)"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
@@ -49,10 +49,10 @@ group_by <- dplyr::group_by
 In this section, I will apply all classification models to evaluate all data combinations, aiming to achieve comprehensive results. The outcomes will be visualized using bar graphs, and a detailed final dataframe will be generated to record all the results systematically.
 
 ```{r}
-source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/data_preprocessing.R")
-source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/model_evaluation_visual.R")
-source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/classification_models.R")
-source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/get_classification_cutoff.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/data_preprocessing.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/model_evaluation_visual.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/classification_models.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/get_classification_cutoff.R")
 ```
 
 ```{r}

@@ -3,7 +3,6 @@ library(dplyr)
 library(glmnet) # for Logistic Regression with regularization
 library(rpart) # for Decision Tree model
 library(randomForest) # for Random Forest model
-library(class) # for K-Nearest Neighbors (KNN)
 library(caret)
 library(e1071) # for Naive Bayes
 
@@ -72,6 +71,41 @@ decision_tree <- function(train_data, test_data) {
   return (list(metrics_dt_dataframe = metrics_dt_dataframe, metrics_dt = metrics_dt))
 }
 
+Naive_bayes <- function(train_data, test_data) {
+  # library(e1071)
+  target_column = "event"
+  # Convert the target column to a factor if it's not already
+  train_data[[target_column]] <- as.factor(train_data[[target_column]])
+  test_labels <- as.factor(test_data[[target_column]])
+  
+  # Remove the target column from the test set for prediction
+  test_features <- test_data %>%
+    select(-all_of(target_column))
+  
+  # Train Naive Bayes model
+  nb_model <- naiveBayes(as.formula(paste(target_column, "~ .")), data = train_data)
+  
+  # Make predictions on the test set
+  predictions <- predict(nb_model, test_features)
+  
+  # Get prediction probabilities
+  prediction_probabilities <- predict(nb_model, test_features, type = "raw")
+  
+  # Ensure both predicted and actual labels are factors with the same levels
+  predictions <- factor(predictions, levels = levels(test_labels))
+  
+  # Evaluate model performance with a confusion matrix
+  conf_matrix <- table(Predicted = predictions, Actual = test_labels)
+  
+  metrics <- calculate_model_metrics(conf_matrix, prediction_probabilities, 
+                                     "Naive Bayes")
+  # create a dataframe with the desired structure
+  metrics_dataframe = get_dataframe("Naive Bayes", metrics)
+  # each classification models need to return these two variables
+  return (list(metrics_dataframe = metrics_dataframe, metrics = metrics))
+}
+
+# NOT USED
 random_forest <- function(train_data, test_data) {
   # identify and remove high-cardinality categorical columns from both datasets
   cat_columns <- names(train_data)[sapply(train_data, is.factor)]
@@ -110,76 +144,4 @@ random_forest <- function(train_data, test_data) {
   metrics_rdf_dataframe <- get_dataframe("Random Forest", metrics_rdf)
   
   return (list(metrics_rdf_dataframe = metrics_rdf_dataframe, metrics_rdf = metrics_rdf))
-}
-
-KNN <- function(train_data, test_data, k = 5) {
-  # load necessary library for KNN
-  # library(class)
-  
-  # separate the features and target variable in both training and testing datasets
-  train_features <- train_data[, -which(names(train_data) == "event"), with = FALSE]
-  test_features <- test_data[, -which(names(train_data) == "event"), with = FALSE]
-  
-  # ensure target variable is correctly referenced as the event column
-  train_labels <- train_data$event
-  
-  # ensure that the feature matrices only contain numeric data (for KNN compatibility)
-  train_features <- as.data.frame(lapply(train_features, as.numeric))
-  test_features <- as.data.frame(lapply(test_features, as.numeric))
-  
-  # perform feature scaling (standardization: zero mean, unit variance)
-  train_features <- as.data.frame(scale(train_features))
-  test_features <- as.data.frame(scale(test_features))
-  
-  # ensure that the lengths of train_features and train_labels match
-  if (nrow(train_features) != length(train_labels)) {
-    stop("'train' and 'class' have different lengths")
-  }
-  
-  # use the KNN model to predict on the testing dataset
-  predict_probabilities_knn <- knn(train = train_features, test = test_features, 
-                                   cl = train_labels, k = k)
-  
-  # confusion matrix and metrics
-  confusion_matrix_knn <- table(Predicted = predict_probabilities_knn, Actual = test_data$event)
-  metrics_knn <- calculate_model_metrics(confusion_matrix_knn, predict_probabilities_knn, "KNN")
-  
-  # create a dataframe with the desired structure
-  metrics_knn_dataframe <- get_dataframe("KNN", metrics_knn)
-  
-  return(list(metrics_knn_dataframe = metrics_knn_dataframe, metrics_knn = metrics_knn))
-}
-
-Naive_bayes <- function(train_data, test_data) {
-  # library(e1071)
-  target_column = "event"
-  # Convert the target column to a factor if it's not already
-  train_data[[target_column]] <- as.factor(train_data[[target_column]])
-  test_labels <- as.factor(test_data[[target_column]])
-  
-  # Remove the target column from the test set for prediction
-  test_features <- test_data %>%
-    select(-all_of(target_column))
-  
-  # Train Naive Bayes model
-  nb_model <- naiveBayes(as.formula(paste(target_column, "~ .")), data = train_data)
-  
-  # Make predictions on the test set
-  predictions <- predict(nb_model, test_features)
-  
-  # Get prediction probabilities
-  prediction_probabilities <- predict(nb_model, test_features, type = "raw")
-  
-  # Ensure both predicted and actual labels are factors with the same levels
-  predictions <- factor(predictions, levels = levels(test_labels))
-  
-  # Evaluate model performance with a confusion matrix
-  conf_matrix <- table(Predicted = predictions, Actual = test_labels)
-  
-  metrics <- calculate_model_metrics(conf_matrix, prediction_probabilities, 
-                                     "Naive Bayes")
-  # create a dataframe with the desired structure
-  metrics_dataframe = get_dataframe("Naive Bayes", metrics)
-  # each classification models need to return these two variables
-  return (list(metrics_dataframe = metrics_dataframe, metrics = metrics))
 }

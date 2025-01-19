@@ -1,6 +1,6 @@
 ---
 title: "DeFi Survival and LTM Project Notebook (qinh2):"
-subtitle: "DEFI - Survival Data Pipeline (Fall 2024)"
+subtitle: "DEFI - Survival Data Pipeline"
 author: "Hanzhen Qin(qinh2)"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
@@ -57,8 +57,7 @@ group_by <- dplyr::group_by
   `combine_classification_results`, `accuracy_comparison_plot`, `get_percentage`, 
   `specific_accuracy_statistics`, `combine_accuracy_dataframes`
   
-  * Classification model: `logistic_regression`, `decision_tree`, `random_forest`, `KNN(not used)`
-  , `Naive_bayes(not recommended)`
+  * Classification model: `logistic_regression`, `decision_tree`, `Naive_bayes`, `random_forest (NOT USED)`
 
 ## Data Preprocessing
 
@@ -68,7 +67,7 @@ The `get_train_test_data` function is designed to get the training and test data
 
 ```{r}
 get_train_test_data <- function(indexEvent, outcomeEvent) {
-  source("~/DAR-DeFi-LTM-F24/DeFi_source/dataLoader.R")
+  source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/dataLoader.R")
 }
 ```
 
@@ -524,7 +523,49 @@ decision_tree <- function(train_data, test_data) {
 }
 ```
 
-### def random_forest
+### def Naive_bayes
+
+(Naive Bayes, relying on the assumption of feature independence, struggles to capture the intricate relationships and dependencies between features that are common in survival data. This simplification leads to inaccurate probability estimations and poor classification performance, especially in scenarios with overlapping or correlated features. Additionally, the model's inability to adjust effectively to imbalanced datasets results in low balanced accuracy and F1 scores, as it tends to overemphasize the majority class while failing to adequately recognize minority class instances. These limitations make Naive Bayes unsuitable for predicting survival data outcomes.)
+
+The `Naive_bayes` function implements a Naive Bayes classifier for binary classification tasks. It begins by converting the target column (`event`) in the training and testing datasets to factors to ensure proper model functionality. The function trains a Naive Bayes model on the training dataset using all features except the target column. Predictions and prediction probabilities are then generated for the test set, ensuring consistency in factor levels between predicted and actual labels. A confusion matrix is created to evaluate the model’s performance, and key metrics such as accuracy, precision, recall, and F1 score are calculated using the `calculate_model_metrics` function. The metrics are formatted into a structured dataframe.
+
+```{r}
+Naive_bayes <- function(train_data, test_data) {
+  # library(e1071)
+  target_column = "event"
+  # Convert the target column to a factor if it's not already
+  train_data[[target_column]] <- as.factor(train_data[[target_column]])
+  test_labels <- as.factor(test_data[[target_column]])
+  
+  # Remove the target column from the test set for prediction
+  test_features <- test_data %>%
+    select(-all_of(target_column))
+  
+  # Train Naive Bayes model
+  nb_model <- naiveBayes(as.formula(paste(target_column, "~ .")), data = train_data)
+  
+  # Make predictions on the test set
+  predictions <- predict(nb_model, test_features)
+  
+  # Get prediction probabilities
+  prediction_probabilities <- predict(nb_model, test_features, type = "raw")
+  
+  # Ensure both predicted and actual labels are factors with the same levels
+  predictions <- factor(predictions, levels = levels(test_labels))
+  
+  # Evaluate model performance with a confusion matrix
+  conf_matrix <- table(Predicted = predictions, Actual = test_labels)
+  
+  metrics <- calculate_model_metrics(conf_matrix, prediction_probabilities, 
+                                     "Naive Bayes")
+  # create a dataframe with the desired structure
+  metrics_dataframe = get_dataframe("Naive Bayes", metrics)
+  # each classification models need to return these two variables
+  return (list(metrics_dataframe = metrics_dataframe, metrics = metrics))
+}
+```
+
+### def random_forest (NOT USED)
 
 The `random_forest` function trains a Random Forest classification model on the provided training data after preparing it by removing high-cardinality categorical columns (those with more than 53 unique levels), which could hinder model performance. The function then optimizes the model with hyperparameters, specifically tuning the number of trees (`ntree`) and the `mtry` parameter for optimal feature selection. After training, it predicts event probabilities on the testing data, generates a confusion matrix to assess prediction accuracy, and calculates relevant model performance metrics. 
 
@@ -567,93 +608,5 @@ random_forest <- function(train_data, test_data) {
   metrics_rdf_dataframe <- get_dataframe("Random Forest", metrics_rdf)
 
   return (list(metrics_rdf_dataframe = metrics_rdf_dataframe, metrics_rdf = metrics_rdf))
-}
-```
-
-### def KNN
-
-(KNN will not be included in the latest pipeline due to its excessively high processing time for new datasets, making it unsuitable for the latest requirements. While scaling and normalization can improve its adaptability to certain datasets, it remains impractical for our current needs. As a result, we have decided to exclude KNN from consideration in the updated pipeline.)
-
-This `KNN` function implements a K-nearest neighbor-based classification model for classifying and predicting the test data set. The function first extracts features and target variables from the training and test sets, and ensures that the feature matrix contains only numerical data. To improve model performance, the feature values are standardized (zero mean, unit variance) to avoid the impact of feature range differences on distance calculations. Subsequently, the function uses the `knn` method to classify and predict the test data, and generates a confusion matrix based on the predicted results and actual labels to calculate model performance indicators. Finally, the model's evaluation indicators are formatted as a data frame for further analysis and comparison.
-
-```{r}
-KNN <- function(train_data, test_data, k = 5) {
-  # load necessary library for KNN
-  # library(class)
-  
-  # separate the features and target variable in both training and testing datasets
-  train_features <- train_data[, -which(names(train_data) == "event"), with = FALSE]
-  test_features <- test_data[, -which(names(train_data) == "event"), with = FALSE]
-  
-  # ensure target variable is correctly referenced as the event column
-  train_labels <- train_data$event
-  
-  # ensure that the feature matrices only contain numeric data (for KNN compatibility)
-  train_features <- as.data.frame(lapply(train_features, as.numeric))
-  test_features <- as.data.frame(lapply(test_features, as.numeric))
-  
-  # perform feature scaling (standardization: zero mean, unit variance)
-  train_features <- as.data.frame(scale(train_features))
-  test_features <- as.data.frame(scale(test_features))
-  
-  # ensure that the lengths of train_features and train_labels match
-  if (nrow(train_features) != length(train_labels)) {
-    stop("'train' and 'class' have different lengths")
-  }
-  
-  # use the KNN model to predict on the testing dataset
-  predict_probabilities_knn <- knn(train = train_features, test = test_features, 
-                                   cl = train_labels, k = k)
-  
-  # confusion matrix and metrics
-  confusion_matrix_knn <- table(Predicted = predict_probabilities_knn, Actual = test_data$event)
-  metrics_knn <- calculate_model_metrics(confusion_matrix_knn, predict_probabilities_knn, "KNN")
-  
-  # create a dataframe with the desired structure
-  metrics_knn_dataframe <- get_dataframe("KNN", metrics_knn)
-  
-  return(list(metrics_knn_dataframe = metrics_knn_dataframe, metrics_knn = metrics_knn))
-}
-```
-
-### def Naive_bayes (@Author: Haolin Luo)
-
-(Naive Bayes, relying on the assumption of feature independence, struggles to capture the intricate relationships and dependencies between features that are common in survival data. This simplification leads to inaccurate probability estimations and poor classification performance, especially in scenarios with overlapping or correlated features. Additionally, the model's inability to adjust effectively to imbalanced datasets results in low balanced accuracy and F1 scores, as it tends to overemphasize the majority class while failing to adequately recognize minority class instances. These limitations make Naive Bayes unsuitable for predicting survival data outcomes.)
-
-The `Naive_bayes` function implements a Naive Bayes classifier for binary classification tasks. It begins by converting the target column (`event`) in the training and testing datasets to factors to ensure proper model functionality. The function trains a Naive Bayes model on the training dataset using all features except the target column. Predictions and prediction probabilities are then generated for the test set, ensuring consistency in factor levels between predicted and actual labels. A confusion matrix is created to evaluate the model’s performance, and key metrics such as accuracy, precision, recall, and F1 score are calculated using the `calculate_model_metrics` function. The metrics are formatted into a structured dataframe.
-
-```{r}
-Naive_bayes <- function(train_data, test_data) {
-  # library(e1071)
-  target_column = "event"
-  # Convert the target column to a factor if it's not already
-  train_data[[target_column]] <- as.factor(train_data[[target_column]])
-  test_labels <- as.factor(test_data[[target_column]])
-  
-  # Remove the target column from the test set for prediction
-  test_features <- test_data %>%
-    select(-all_of(target_column))
-  
-  # Train Naive Bayes model
-  nb_model <- naiveBayes(as.formula(paste(target_column, "~ .")), data = train_data)
-  
-  # Make predictions on the test set
-  predictions <- predict(nb_model, test_features)
-  
-  # Get prediction probabilities
-  prediction_probabilities <- predict(nb_model, test_features, type = "raw")
-  
-  # Ensure both predicted and actual labels are factors with the same levels
-  predictions <- factor(predictions, levels = levels(test_labels))
-  
-  # Evaluate model performance with a confusion matrix
-  conf_matrix <- table(Predicted = predictions, Actual = test_labels)
-  
-  metrics <- calculate_model_metrics(conf_matrix, prediction_probabilities, 
-                                     "Naive Bayes")
-  # create a dataframe with the desired structure
-  metrics_dataframe = get_dataframe("Naive Bayes", metrics)
-  # each classification models need to return these two variables
-  return (list(metrics_dataframe = metrics_dataframe, metrics = metrics))
 }
 ```

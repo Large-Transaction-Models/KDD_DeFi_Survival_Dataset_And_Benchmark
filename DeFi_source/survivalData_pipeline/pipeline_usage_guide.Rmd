@@ -1,6 +1,6 @@
 ---
 title: "DeFi Survival and LTM Project Notebook (qinh2):"
-subtitle: "DEFI - Survival Data Pipeline Usage Guide (Fall 2024)"
+subtitle: "DEFI - Survival Data Pipeline Usage Guide"
 author: "Hanzhen Qin(qinh2)"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
@@ -49,10 +49,11 @@ group_by <- dplyr::group_by
 This file demonstrates how to use the functions in our pipeline, detailing the structure of the separation model's output and how the results are presented. It does not provide a step-by-step explanation of each function in the pipeline. If you have any questions or need further clarification, please refer to `survivalData_pipeline.Rmd`, which contains a comprehensive introduction to each function.
 
 ```{r}
-source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/data_preprocessing.R")
-source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/model_evaluation_visual.R")
-source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/classification_models.R")
-source("~/DAR-DeFi-LTM-F24/DeFi_source/survivalData_pipeline/get_classification_cutoff.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/data_preprocessing.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/model_evaluation_visual.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/classification_models.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline
+       /get_classification_cutoff.R")
 
 # set the indexEvent and outcomeEvent
 indexEvent = "Type your dataset index name - lowercase"
