@@ -1,6 +1,5 @@
 ---
-title: "DeFi Survival and LTM Project Notebook (qinh2):"
-subtitle: "DEFI - Survival Data Pipeline"
+title: "DMLR DeFi Survival Data Pipeline Example(qinh2):"
 author: "Hanzhen Qin(qinh2)"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
@@ -27,7 +26,8 @@ local({
 
 # Load required packages and install if necessary
 required_packages <- c("rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
-"randomForest", "caret", "survival", "survminer", "ggplot2", "kableExtra", "rpart", "glmnet", "data.table", "class", "reshape2", "pander", "readr", "dplyr", "ROSE")
+"randomForest", "caret", "survival", "survminer", "ggplot2", "kableExtra", "rpart", "glmnet", "data.table",
+"reshape2", "pander", "readr", "dplyr", "ROSE")
 
 # Check and install missing packages
 for (pkg in required_packages) {

@@ -1,6 +1,5 @@
 ---
-title: "DeFi Survival and LTM Project Notebook (qinh2):"
-subtitle: "DEFI - Survival Data Pipeline Usage Guide"
+title: "DMLR DeFi Survival Data Pipeline Usage Guide(qinh2):"
 author: "Hanzhen Qin(qinh2)"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
@@ -27,7 +26,8 @@ local({
 
 # Load required packages and install if necessary
 required_packages <- c("rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
-"randomForest", "caret", "survival", "survminer", "ggplot2", "kableExtra", "rpart", "glmnet", "data.table", "class", "reshape2", "pander", "readr", "dplyr", "ROSE")
+"randomForest", "caret", "survival", "survminer", "ggplot2", "kableExtra", "rpart", "glmnet", "data.table",
+"reshape2", "pander", "readr", "dplyr", "ROSE")
 
 # Check and install missing packages
 for (pkg in required_packages) {
@@ -52,8 +52,7 @@ This file demonstrates how to use the functions in our pipeline, detailing the s
 source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/data_preprocessing.R")
 source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/model_evaluation_visual.R")
 source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/classification_models.R")
-source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline
-       /get_classification_cutoff.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/get_classification_cutoff.R")
 
 # set the indexEvent and outcomeEvent
 indexEvent = "Type your dataset index name - lowercase"
