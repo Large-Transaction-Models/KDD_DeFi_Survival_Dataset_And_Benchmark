@@ -1,0 +1,970 @@
+---
+title: "DMLR DeFi Survival Data Pipeline Test"
+author: "Hanzhen Qin - qinh2"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_notebook: default
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: yes
+    theme: united
+---
+
+```{r, include=FALSE}
+# This code will install required packages if they are not already installed
+# ALWAYS INSTALL YOUR PACKAGES LIKE THIS!
+if (!require("conflicted")) {
+  install.packages("conflicted")
+  library(conflicted)
+}
+if (!require("rmarkdown")) {
+  install.packages("rmarkdown")
+  library(rmarkdown)
+}
+if (!require("tidyverse")) {
+  install.packages("tidyverse")
+  library(tidyverse)
+}
+if (!require("stringr")) {
+  install.packages("stringr")
+  library(stringr)
+}
+if (!require("ggbiplot")) {
+  install.packages("ggbiplot")
+  library(ggbiplot)
+}
+if (!require("pheatmap")) {
+  install.packages("pheatmap")
+  library(pheatmap)
+}
+if (!require("randomForest")) {
+  install.packages("randomForest")
+  library(randomForest)
+}
+if (!require("caret")) {
+  install.packages("caret")
+  library(caret)
+}
+if (!require("survival")) {
+  install.packages("survival")
+  library(survival)
+}
+if (!require("survminer")) {
+  install.packages("survminer")
+  library(survminer)
+}
+if (!require("ggplot2")) {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+if (!require("kableExtra")) {
+  install.packages("kableExtra")
+  library(kableExtra)
+}
+if (!require("rpart")) {
+  install.packages("rpart")
+  library(rpart)
+}
+if (!require("glmnet")) {
+  install.packages("glmnet")
+  library(glmnet)
+}
+if (!require("data.table")) {
+  install.packages("data.table")
+  library(data.table)
+}
+if (!require("reshape2")) {
+  install.packages("reshape2")
+  library(reshape2)
+}
+if (!require("pander")) {
+  install.packages("pander")
+  library(pander)
+}
+if (!require("readr")) {
+  install.packages("readr")
+  library(readr)
+}
+if (!require("dplyr")) {
+  install.packages("dplyr")
+  library(dplyr)
+}
+if (!require("e1071")) {
+  install.packages("e1071")
+  library(e1071)
+}
+if (!require("ROSE")) {
+  install.packages("ROSE")
+  library(ROSE)
+}
+if (!require("xgboost")) {
+  intsall.packages("xgboost")
+  library(xgboost)
+}
+if (!require("gbm")) {
+  install.packages("gbm")
+  library(gbm)
+}
+if (!require("parallel")) {
+  install.packages("parallel")
+  library(parallel)
+}
+
+# conflict package preference
+conflict_prefer("slice", "dplyr")
+conflicts_prefer(dplyr::filter)
+```
+
+# Survival Data Pipeline
+
+* Project name: DMLR DeFi-LTM
+
+## New Classification models
+
+In this section, I will implement three new classification models and to test them on the section `Test on the dataset`. These models are XGBoost, GBM and Elastic Net.
+
+### def XG_Boost
+
+The `XG_Boost` function implements an **XGBoost classifier** to predict binary outcomes using **gradient boosting decision trees**. The function first **preprocesses the dataset** by converting it into `data.table` format for faster operations, standardizing numeric features, and encoding event labels as **0 (no) and 1 (yes)**. It then **trains an XGBoost model with 100 boosting iterations**, using logistic regression as the objective function for binary classification. The trained model generates **probability-based predictions**, which are converted into **binary classifications** using a **threshold of 0.5**. Finally, the function evaluates the model’s performance using **a confusion matrix and key classification metrics** (accuracy, precision, recall, and F1-score) and returns the results in a structured dataframe.
+
+```{r}
+XG_Boost <- function(train_data, test_data) {
+  # Load required libraries
+  # library(xgboost)   # XGBoost for gradient boosting
+  # library(data.table)  # Efficient data handling with data.table
+  
+  # Convert train_data and test_data to data.table format for optimized processing
+  setDT(train_data)
+  setDT(test_data)
+  
+  # Identify numeric features in the dataset for standardization
+  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
+
+  # Standardize numeric columns (mean = 0, standard deviation = 1) to improve model performance
+  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  
+  # Convert data to matrix format, as required by XGBoost
+  x_train <- model.matrix(event ~ . - 1, data = train_data)  # Feature matrix for training
+  y_train <- as.numeric(train_data$event == "yes")  # Convert event labels to binary format (0 = no, 1 = yes)
+  x_test <- model.matrix(event ~ . - 1, data = test_data)  # Feature matrix for testing
+  
+  # Train an XGBoost model with default hyperparameters
+  # - nrounds = 100: Number of boosting iterations
+  # - objective = "binary:logistic": Binary classification using logistic regression
+  # - verbose = 0: Suppress log output to keep console clean
+  xgb_model <- xgboost(data = x_train, 
+                       label = y_train, 
+                       nrounds = 100, 
+                       objective = "binary:logistic", 
+                       verbose = 0)
+
+  # Generate probability predictions for the test dataset
+  predict_probabilities_xgb <- predict(xgb_model, x_test)
+  
+  # Convert probability predictions into binary class labels (yes/no) using a threshold of 0.5
+  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > 0.5, "yes", "no")
+  
+  # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
+  confusion_matrix_xgb <- table(Predicted = binary_prediction_xgb, Actual = test_data$event)
+  
+  # Evaluate model performance using key classification metrics (accuracy, precision, recall, F1-score)
+  metrics_xgb <- calculate_model_metrics(confusion_matrix_xgb, predict_probabilities_xgb, "XGBoost")
+  
+  # Store the calculated metrics in a structured dataframe for easy comparison
+  metrics_xgb_dataframe <- get_dataframe("XGBoost", metrics_xgb)
+  
+  # Return both the detailed metrics list and the formatted dataframe
+  return (list(metrics_xgb_dataframe = metrics_xgb_dataframe, metrics_xgb = metrics_xgb))
+}
+```
+
+### def XG_Boost_optimization
+
+The `XG_Boost_optimization` function implements an **XGBoost classifier for binary classification**, leveraging gradient boosting decision trees. The function begins by preprocessing the dataset, standardizing numeric features, and converting categorical labels into binary format (0/1). It then trains an optimized XGBoost model using parallel processing, **tree depth of 6**, **learning rate of 0.1**, and an **80%** feature and row subsampling strategy to enhance generalization. The training process includes early stopping, which halts training if performance does not improve for **10 rounds**. After training, the function makes probability-based predictions, converts them into binary classifications, and evaluates the model using accuracy, precision, recall, and F1-score.
+
+```{r}
+XG_Boost_optimization <- function(train_data, test_data) {
+  # Load required libraries
+  # library(xgboost)  # XGBoost for gradient boosting
+  # library(data.table)  # Efficient data handling
+  
+  # Convert train_data and test_data to data.table format
+  setDT(train_data)
+  setDT(test_data)
+  
+  # Identify numeric features and scale them
+  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
+  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  
+  # Convert data to matrix format required by XGBoost
+  x_train <- model.matrix(event ~ . - 1, data = train_data)
+  y_train <- as.numeric(train_data$event == "yes")  # Convert event labels to 0/1
+  x_test <- model.matrix(event ~ . - 1, data = test_data)
+
+  # Convert to DMatrix format, which is optimized for XGBoost
+  dtrain <- xgb.DMatrix(data = x_train, label = y_train)
+  dtest <- xgb.DMatrix(data = x_test)
+  
+  # Detect available CPU cores for parallel computation
+  num_cores <- detectCores()
+
+  # Define XGBoost hyperparameters
+  # XGBoost Hyperparameter Configuration:
+  # - objective = "binary:logistic": Defines a binary classification task with logistic regression loss.
+  # - eval_metric = "logloss": Uses log-loss as the evaluation metric to measure prediction accuracy.
+  # - max_depth = 6: Sets the maximum depth of each tree (higher values increase model complexity).
+  # - eta = 0.1: Defines the learning rate (lower values prevent overfitting but require more trees).
+  # - subsample = 0.8: Randomly selects 80% of the data per boosting iteration to improve generalization.
+  # - colsample_bytree = 0.8: Uses 80% of features for each tree to reduce overfitting.
+  # - nthread = num_cores: Utilizes all available CPU cores to speed up training.
+  params <- list(
+    objective = "binary:logistic",
+    eval_metric = "logloss",
+    max_depth = 6,
+    eta = 0.1,
+    subsample = 0.8,
+    colsample_bytree = 0.8,
+    nthread = num_cores
+  )
+
+  # Train XGBoost model with early stopping
+  # XGBoost Model Training Strategy:
+  # - xgb.train(): Trains the model with the defined hyperparameters.
+  # - nrounds = 200: Runs 200 boosting iterations to enhance learning.
+  # - early_stopping_rounds = 10: Stops training if log-loss does not improve for 10 consecutive rounds.
+  # - watchlist = list(train = dtrain): Monitors training performance to optimize stopping criteria.
+  # - verbose = 0: Suppresses training logs for a cleaner output.
+  xgb_model <- xgb.train(params = params,
+                         data = dtrain,
+                         nrounds = 200,
+                         early_stopping_rounds = 10,
+                         watchlist = list(train = dtrain),
+                         verbose = 0)
+
+
+  # Predict probabilities on the test dataset
+  predict_probabilities_xgb <- predict(xgb_model, dtest)
+  
+  # Convert predicted probabilities into binary class labels (yes/no) using a threshold of 0.5
+  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > 0.5, "yes", "no")
+  
+  # Create a confusion matrix to compare predicted vs. actual outcomes
+  confusion_matrix_xgb <- table(Predicted = binary_prediction_xgb, Actual = test_data$event)
+  
+  # Evaluate model performance using accuracy, precision, recall, and F1-score
+  metrics_xgb <- calculate_model_metrics(confusion_matrix_xgb, predict_probabilities_xgb, "XGBoost")
+  
+  # Store the calculated metrics in a structured dataframe for easy comparison
+  metrics_xgb_dataframe <- get_dataframe("XGBoost", metrics_xgb)
+  
+  # Return both the detailed metrics list and the formatted dataframe
+  return (list(metrics_xgb_dataframe = metrics_xgb_dataframe, metrics_xgb = metrics_xgb))
+}
+```
+
+### def GBM
+
+The `GBM` function implements a **Gradient Boosting Machine (GBM)** model to predict binary outcomes using decision trees. It begins by **preprocessing the data**, converting it to `data.table` format for efficient handling, standardizing numeric features, and encoding the event variable as **0 (no) or 1 (yes)**. The function then trains a GBM model with **100 boosting iterations and a tree depth of 3**, which balances model complexity and overfitting risks. After training, it predicts **probabilities** on the test dataset, converts them into **binary classifications**, and evaluates the model’s performance using a confusion matrix and key classification metrics.
+
+```{r}
+GBM <- function(train_data, test_data) {
+  # Load required libraries
+  # library(gbm)         # GBM package for gradient boosting
+  # library(data.table)  # Efficient data handling with data.table
+  
+  # Convert train_data and test_data to data.table format for optimized processing
+  setDT(train_data)
+  setDT(test_data)
+
+  # Identify numeric features in the dataset for standardization
+  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
+
+  # Standardize numeric columns (mean = 0, standard deviation = 1) to improve model performance
+  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+
+  # Convert the target variable (event) into a numeric format for binary classification
+  # "yes" → 1 (positive event), "no" → 0 (negative event)
+  train_data[, event := ifelse(event == "yes", 1, 0)]
+  test_data[, event := ifelse(event == "yes", 1, 0)]
+
+  # Train the GBM model using gradient boosting with default hyperparameters
+  # - event ~ .: Predict the event variable using all available features.
+  # - data = train_data: Use the preprocessed training dataset for model training.
+  # - distribution = "bernoulli": Use Bernoulli distribution for binary classification (0/1 outcome).
+  # - n.trees = 100: Number of boosting iterations (reduced from 500 to speed up training).
+  # - interaction.depth = 3: Maximum depth of each tree (limits complexity to prevent overfitting).
+  gbm_model <- gbm(event ~ ., 
+                    data = train_data, 
+                    distribution = "bernoulli", 
+                    n.trees = 100, 
+                    interaction.depth = 3)
+
+  # Generate probability predictions on the test dataset using the trained model
+  predict_probabilities_gbm <- predict(gbm_model, test_data, n.trees = 100, type = "response")
+
+  # Convert probability predictions into binary class labels (yes/no) using a threshold of 0.5
+  binary_prediction_gbm <- ifelse(predict_probabilities_gbm > 0.5, "yes", "no")
+
+  # Create a confusion matrix to compare predictions vs. actual outcomes
+  confusion_matrix_gbm <- table(Predicted = binary_prediction_gbm, Actual = test_data$event)
+
+  # Evaluate model performance using key metrics: accuracy, precision, recall, and F1-score
+  metrics_gbm <- calculate_model_metrics(confusion_matrix_gbm, predict_probabilities_gbm, "GBM")
+
+  # Store the calculated metrics in a structured dataframe for easy comparison
+  metrics_gbm_dataframe <- get_dataframe("GBM", metrics_gbm)
+
+  # Return both the detailed metrics list and the formatted dataframe
+  return (list(metrics_gbm_dataframe = metrics_gbm_dataframe, metrics_gbm = metrics_gbm))
+}
+```
+
+### def GBM_optimization
+
+The `GBM_optimization` function trains a **Gradient Boosting Machine (GBM)** model to predict binary outcomes using an optimized set of hyperparameters. It first preprocesses the data by standardizing numeric features and converting categorical event labels into binary (0/1). The function then detects available CPU cores to enable parallel computation, improving training efficiency. The GBM model is trained with **300 trees, a maximum depth of 3, a learning rate of 0.01, and 80% data sampling per iteration** to balance speed and accuracy while reducing overfitting. Cross-validation (`cv.folds = 3`) is used to automatically determine the optimal number of trees. Finally, the function generates predictions on the test dataset, evaluates performance using key metrics such as accuracy, precision, recall, and F1-score, and returns a structured results dataframe.
+
+```{r}
+GBM_optimization <- function(train_data, test_data) {
+  # Load required libraries
+  # library(gbm)         # Load GBM package for gradient boosting modeling
+  # library(data.table)  # Load data.table for efficient data handling
+  # library(parallel)    # Load parallel to utilize multi-core processing
+
+  # Convert train_data and test_data to data.table format for fast operations
+  setDT(train_data)
+  setDT(test_data)
+
+  # Identify numeric features in the dataset for scaling
+  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
+
+  # Standardize numeric columns (mean = 0, standard deviation = 1)
+  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+
+  # Convert the target variable (event) into numeric format (Binary: 0 = "no", 1 = "yes")
+  train_data[, event := ifelse(event == "yes", 1, 0)]
+  test_data[, event := ifelse(event == "yes", 1, 0)]
+
+  # Detect available CPU cores for parallel processing (to speed up GBM training)
+  num_cores <- detectCores()
+
+  # Train GBM model with optimized hyperparameters for better speed and performance
+  # GBM Model Configuration:
+  # - event ~ .: Predict the event variable using all available features.
+  # - data = train_data: Use the preprocessed training dataset for model training.
+  # - distribution = "bernoulli": Use Bernoulli distribution for binary classification (0/1 outcome).
+  # - n.trees = 300: Number of boosting iterations (reduced from 500 to speed up training).
+  # - interaction.depth = 3: Maximum depth of each tree (limits complexity to prevent overfitting).
+  # - shrinkage = 0.01: Learning rate: lower values reduce overfitting but require more trees.
+  # - bag.fraction = 0.8: Fraction of training data used in each iteration (adds randomness).
+  # - train.fraction = 0.8: Use 80% of the dataset for training, leaving 20% for validation.
+  # - cv.folds = 3: 3-fold cross-validation to optimize the number of trees.
+  # - n.cores = num_cores: Enable parallel computation using all available CPU cores.
+  gbm_model <- gbm(event ~ .,  
+                 data = train_data, 
+                 distribution = "bernoulli",  
+                 n.trees = 300,  
+                 interaction.depth = 3,  
+                 shrinkage = 0.01,  
+                 bag.fraction = 0.8,  
+                 train.fraction = 0.8,  
+                 cv.folds = 3,  
+                 n.cores = num_cores)
+
+  # Automatically determine the optimal number of trees using cross-validation
+  best_trees <- gbm.perf(gbm_model, method = "cv", plot.it = FALSE) # Avoid plotting to speed up processing
+
+  # Generate probability predictions on the test dataset using the optimal number of trees
+  predict_probabilities_gbm <- predict(gbm_model, test_data, n.trees = best_trees, type = "response")
+
+  # Convert probability predictions into binary class labels (yes/no) using a threshold of 0.5
+  binary_prediction_gbm <- ifelse(predict_probabilities_gbm > 0.5, "yes", "no")
+
+  # Create a confusion matrix to compare model predictions against actual test outcomes
+  confusion_matrix_gbm <- table(Predicted = binary_prediction_gbm, Actual = test_data$event)
+
+  # Calculate model performance metrics (accuracy, precision, recall, F1-score, etc.)
+  metrics_gbm <- calculate_model_metrics(confusion_matrix_gbm, predict_probabilities_gbm, "GBM")
+
+  # Store the calculated metrics in a structured dataframe for easier comparison with other models
+  metrics_gbm_dataframe <- get_dataframe("GBM", metrics_gbm)
+
+  # Return both the detailed metrics list and the formatted dataframe
+  return (list(metrics_gbm_dataframe = metrics_gbm_dataframe, metrics_gbm = metrics_gbm))
+}
+```
+
+### def elastic_net
+
+The `elastic_net` function implements an **Elastic Net Classifier**, **regularized logistic regression model** that combines **Lasso (L1) and Ridge (L2) penalties** for improved generalization. The function first preprocesses the dataset by standardizing numeric features and converting the data into a matrix format, as required by the `glmnet` package. The Elastic Net model is then trained with **α = 0.5**, meaning it applies an equal mix of Lasso and Ridge regularization. The function predicts event probabilities for the test dataset, converts them into binary classifications, and evaluates performance using accuracy, precision, recall, and F1-score.
+
+```{r}
+elastic_net <- function(train_data, test_data) {
+    # Load required libraries
+    # library(glmnet) # Required for Elastic Net (Lasso + Ridge regularization)
+    # library(data.table) # For efficient data handling using data.table
+    
+    # Convert train_data and test_data to data.table format for optimized processing
+    setDT(train_data)
+    setDT(test_data)
+    
+    # Identify numeric features in the dataset for standardization
+    numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
+
+    # Standardize numeric columns (mean = 0, standard deviation = 1) to improve model performance
+    train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+    test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+    
+    # Convert the dataset into a matrix format, as required by glmnet
+    x_train <- model.matrix(event ~ . - 1, data = train_data) # Feature matrix for training
+    y_train <- train_data$event # Target variable
+    x_test <- model.matrix(event ~ . - 1, data = test_data) # Feature matrix for testing
+    
+    # Train the Elastic Net model with a combination of Lasso (L1) and Ridge (L2) regularization
+    # alpha = 0.5 sets an equal mix of Lasso and Ridge penalties
+    elastic_net_model <- glmnet(x_train, y_train, family = "binomial", alpha = 0.5)
+
+    # Predict event probabilities for the test dataset
+    # s = 0.01 sets a specific regularization strength for prediction
+    predict_probabilities_en <- predict(elastic_net_model, s = 0.01, newx = x_test, type = "response")
+
+    # Convert probability predictions into binary class labels (yes/no) using a threshold of 0.5
+    binary_prediction_en <- ifelse(predict_probabilities_en > 0.5, "yes", "no")
+    
+    # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
+    confusion_matrix_en <- table(Predicted = binary_prediction_en, Actual = test_data$event)
+    
+    # Evaluate model performance using key classification metrics (accuracy, precision, recall, F1-score)
+    metrics_en <- calculate_model_metrics(confusion_matrix_en, predict_probabilities_en, "Elastic Net")
+    
+    # Store the calculated metrics in a structured dataframe for easy comparison
+    metrics_en_dataframe <- get_dataframe("Elastic Net", metrics_en)
+    
+    # Return both the detailed metrics list and the formatted dataframe
+    return (list(metrics_en_dataframe = metrics_en_dataframe, metrics_en = metrics_en))
+    }
+```
+
+## Test on the dataset
+
+```{r}
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/data_preprocessing.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/model_evaluation_visual.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/classification_models.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/get_classification_cutoff.R")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "deposit"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+# If you want to check the train and test data, you can run the following codes.
+# cat("Train data:\n")
+# summary(train)
+# cat("Test data:\n")
+# summary(test)
+```
+
+Using the `get_classification_cutoff` funtion to get the optimal timeDiff, then we will call the `data_processing` function above to get all the training data and test data.
+
+```{r}
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+If the ratio of "No" labels to "Yes" labels in the dataset is significantly imbalanced, we can utilize the `smote_data` function to generate a new, more balanced dataset. This balanced dataset ensures that both classes are better represented, helping to mitigate the bias introduced by class imbalance and ultimately improving the accuracy and reliability of our classification model.
+
+```{r}
+train_data <- smote_data(train_data)
+```
+
+Then you can check the updated balanced version of train data.
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+After obtaining the train and test data, we will apply all the classification models to evaluate the relationship between these events.
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+pander(accuracy_lr_dataframe)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+pander(accuracy_dt_dataframe)
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+pander(accuracy_nb_dataframe)
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
+```
+
+```{r}
+gbm_return = GBM(train_data, test_data)
+accuracy_gbm_dataframe = gbm_return$metrics_gbm_dataframe
+accuracy_gbm = gbm_return$metrics_gbm
+```
+
+```{r}
+en_return = elastic_net(train_data, test_data)
+accuracy_en_dataframe = en_return$metrics_en_dataframe
+accuracy_en = en_return$metrics_en
+```
+
+```{r}
+# compare all the classification models
+metrics_list_BD <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes"), 
+  list(accuracy_xgb, "XGBoost"), 
+  list(accuracy_gbm, "GBM"), 
+  list(accuracy_en, "Elastic Net")
+)
+accuracy_comparison_plot(metrics_list_BD)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BD <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BD <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe, accuracy_xgb_dataframe, 
+                                   accuracy_gbm_dataframe, accuracy_en_dataframe)
+combined_results_BD <- combine_classification_results(accuracy_dataframe_list_BD, data_name_BD)
+
+# display the combined dataframe
+pander(combined_results_BD, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "repay"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
+```
+
+```{r}
+gbm_return = GBM(train_data, test_data)
+accuracy_gbm_dataframe = gbm_return$metrics_gbm_dataframe
+accuracy_gbm = gbm_return$metrics_gbm
+```
+
+```{r}
+en_return = elastic_net(train_data, test_data)
+accuracy_en_dataframe = en_return$metrics_en_dataframe
+accuracy_en = en_return$metrics_en
+```
+
+```{r}
+# compare all the classification models
+metrics_list_BR <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes"), 
+  list(accuracy_xgb, "XGBoost"), 
+  list(accuracy_gbm, "GBM"), 
+  list(accuracy_en, "Elastic Net")
+)
+accuracy_comparison_plot(metrics_list_BR)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BR <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BR <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe, accuracy_xgb_dataframe, 
+                                   accuracy_gbm_dataframe, accuracy_en_dataframe)
+combined_results_BR <- combine_classification_results(accuracy_dataframe_list_BR, data_name_BR)
+
+# display the combined dataframe
+pander(combined_results_BR, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "withdraw"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
+```
+
+```{r}
+gbm_return = GBM(train_data, test_data)
+accuracy_gbm_dataframe = gbm_return$metrics_gbm_dataframe
+accuracy_gbm = gbm_return$metrics_gbm
+```
+
+```{r}
+en_return = elastic_net(train_data, test_data)
+accuracy_en_dataframe = en_return$metrics_en_dataframe
+accuracy_en = en_return$metrics_en
+```
+
+```{r}
+# compare all the classification models
+metrics_list_BW <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes"), 
+  list(accuracy_xgb, "XGBoost"), 
+  list(accuracy_gbm, "GBM"), 
+  list(accuracy_en, "Elastic Net")
+)
+accuracy_comparison_plot(metrics_list_BW)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BW <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BW <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe, accuracy_xgb_dataframe, 
+                                   accuracy_gbm_dataframe, accuracy_en_dataframe)
+combined_results_BW <- combine_classification_results(accuracy_dataframe_list_BW, data_name_BW)
+
+# display the combined dataframe
+pander(combined_results_BW, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "account liquidated"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+lr_return = logistic_regression(train_data, test_data)
+accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
+accuracy_lr = lr_return$metrics_lr
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+nb_return = Naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_dataframe
+accuracy_nb = nb_return$metrics
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
+```
+
+```{r}
+gbm_return = GBM(train_data, test_data)
+accuracy_gbm_dataframe = gbm_return$metrics_gbm_dataframe
+accuracy_gbm = gbm_return$metrics_gbm
+```
+
+```{r}
+en_return = elastic_net(train_data, test_data)
+accuracy_en_dataframe = en_return$metrics_en_dataframe
+accuracy_en = en_return$metrics_en
+```
+
+```{r}
+# compare all the classification models
+metrics_list_BAL <- list(
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
+  list(accuracy_nb, "Naive Bayes"), 
+  list(accuracy_xgb, "XGBoost"), 
+  list(accuracy_gbm, "GBM"), 
+  list(accuracy_en, "Elastic Net")
+)
+accuracy_comparison_plot(metrics_list_BAL)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BAL <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BAL <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
+                                   accuracy_nb_dataframe, accuracy_xgb_dataframe, 
+                                   accuracy_gbm_dataframe, accuracy_en_dataframe)
+combined_results_BAL <- combine_classification_results(accuracy_dataframe_list_BAL, data_name_BAL)
+
+# display the combined dataframe
+pander(combined_results_BAL, caption = "Classification Model Performance")
+```
+
+## Record Data Set Without "Yes" Label Data
+
+In these data combinations where
+
+ * `indexEvent = "deposit, withdraw"` and `outcomeEvent = "account liquidated"`
+ 
+ * `indexEvent = "borrow, deposit, repay, withdraw"` and `outcomeEvent = "liquidation performed"`
+ 
+the "Yes" label constitutes 0% of the data. Therefore, classification and prediction for this data combination are unnecessary, and the use of SMOTE technology is not needed anymore.
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "deposit"
+outcomeEvent = "account liquidated"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "withdraw"
+outcomeEvent = "account liquidated"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "liquidation performed"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "deposit"
+outcomeEvent = "liquidation performed"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "repay"
+outcomeEvent = "liquidation performed"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "withdraw"
+outcomeEvent = "liquidation performed"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+## Classification Model Performance For All Data Combinations
+
+After we run all the data combinations, we can use the `combine_accuracy_dataframes` to combine all the classification models' performance into one dataframe.
+
+```{r}
+combined_classification_results <- combine_accuracy_dataframes(
+  list(combined_results_BAL, combined_results_BD, combined_results_BR, combined_results_BW))
+pander(combined_classification_results, caption = "Classification Model Performance for all data")
+```
+
+## Generating Dataframe For Specified Accuracy
+
+This section is only for a special need, not required for the whole pipeline workflow!!!
+
+In this section, the final output is a combined data frame that consolidates performance metrics for multiple classification models across different data scenarios. Each row represents a specific scenario (e.g., "borrow + withdraw" or "borrow + repay"), while the columns display the selected performance metric (e.g., "balanced_accuracy") and the corresponding values for each classification model (e.g., Logistic Regression, Decision Tree). 
+
+```{r}
+ba_accuracy_dataframe_BAL <- specific_accuracy_statistics(data_name_BAL, "balanced_accuracy", 
+                                                      metrics_list_BAL)
+ba_accuracy_dataframe_BD <- specific_accuracy_statistics(data_name_BD, "balanced_accuracy", 
+                                                      metrics_list_BD)
+ba_accuracy_dataframe_BR <- specific_accuracy_statistics(data_name_BR, "balanced_accuracy", 
+                                                      metrics_list_BR)
+ba_accuracy_dataframe_BW <- specific_accuracy_statistics(data_name_BW, "balanced_accuracy", 
+                                                      metrics_list_BW)
+combined_accuracy_dataframe <- combine_accuracy_dataframes(
+  list(ba_accuracy_dataframe_BAL, ba_accuracy_dataframe_BD, ba_accuracy_dataframe_BR, 
+       ba_accuracy_dataframe_BW))
+pander(combined_accuracy_dataframe, caption = "Combined accuracy dataframe")
+```

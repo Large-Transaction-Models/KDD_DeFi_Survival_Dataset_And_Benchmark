@@ -10,26 +10,30 @@ output:
   pdf_document: 
     latex_engine: xelatex
 ---
+
 ```{r setup, include=FALSE}
-# Required R package installation; RUN THIS BLOCK BEFORE ATTEMPTING TO KNIT THIS NOTEBOOK!!!
-# This section installs packages if they are not already installed.
-# This block will not be shown in the knit file.
+# Check and install required R packages
+if (!require("conflicted")) {
+  install.packages("conflicted", dependencies = TRUE)
+  library(conflicted)
+}
 
-knitr::opts_chunk$set(echo = TRUE)
-
-# Set the default CRAN repository
+# Set default CRAN repository
 local({
   r <- getOption("repos")
-  r["CRAN"] <- "http://cran.r-project.org" 
+  r["CRAN"] <- "http://cran.r-project.org"
   options(repos = r)
 })
 
-# Load required packages and install if necessary
-required_packages <- c("rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
-"randomForest", "caret", "survival", "survminer", "ggplot2", "kableExtra", "rpart", "glmnet", "data.table",
-"reshape2", "pander", "readr", "dplyr", "e1071", "ROSE")
+# Define the list of required packages
+required_packages <- c(
+  "rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
+  "randomForest", "caret", "survival", "survminer", "ggplot2", 
+  "kableExtra", "rpart", "glmnet", "data.table", "reshape2", 
+  "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "gbm", "parallel"
+)
 
-# Check and install missing packages
+# Loop through the package list and install missing packages
 for (pkg in required_packages) {
   if (!require(pkg, character.only = TRUE)) {
     install.packages(pkg, dependencies = TRUE)
@@ -37,7 +41,14 @@ for (pkg in required_packages) {
   }
 }
 
-# library preference
+# Handle function name conflicts
+conflict_prefer("slice", "dplyr")
+conflict_prefer("filter", "dplyr")
+
+# Set knitr options for R Markdown
+knitr::opts_chunk$set(echo = TRUE)
+
+# Rename dplyr functions to avoid conflicts with other packages
 select <- dplyr::select
 rename <- dplyr::rename
 summarize <- dplyr::summarize
@@ -57,7 +68,9 @@ group_by <- dplyr::group_by
   `combine_classification_results`, `accuracy_comparison_plot`, `get_percentage`, 
   `specific_accuracy_statistics`, `combine_accuracy_dataframes`
   
-  * Classification model: `logistic_regression`, `decision_tree`, `Naive_bayes`, `random_forest (NOT USED)`
+  * Classification model: `logistic_regression`, `decision_tree`, `Naive_bayes`, `XG_Boost`, `GBM`, 
+  `elastic_net`, `XG_Boost_optimization (NOT USED)`, `GBM_optimization (NOT USED)`, `random_forest (NOT USED)`
+  
 
 ## Data Preprocessing
 
@@ -562,6 +575,331 @@ Naive_bayes <- function(train_data, test_data) {
   metrics_dataframe = get_dataframe("Naive Bayes", metrics)
   # each classification models need to return these two variables
   return (list(metrics_dataframe = metrics_dataframe, metrics = metrics))
+}
+```
+
+### def XG_Boost
+
+The `XG_Boost` function implements an **XGBoost classifier** to predict binary outcomes using **gradient boosting decision trees**. The function first **preprocesses the dataset** by converting it into `data.table` format for faster operations, standardizing numeric features, and encoding event labels as **0 (no) and 1 (yes)**. It then **trains an XGBoost model with 100 boosting iterations**, using logistic regression as the objective function for binary classification. The trained model generates **probability-based predictions**, which are converted into **binary classifications** using a **threshold of 0.5**. Finally, the function evaluates the model’s performance using **a confusion matrix and key classification metrics** (accuracy, precision, recall, and F1-score) and returns the results in a structured dataframe.
+
+```{r}
+XG_Boost <- function(train_data, test_data) {
+  # Load required libraries
+  # library(xgboost)   # XGBoost for gradient boosting
+  # library(data.table)  # Efficient data handling with data.table
+  
+  # Convert train_data and test_data to data.table format for optimized processing
+  setDT(train_data)
+  setDT(test_data)
+  
+  # Identify numeric features in the dataset for standardization
+  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
+
+  # Standardize numeric columns (mean = 0, standard deviation = 1) to improve model performance
+  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  
+  # Convert data to matrix format, as required by XGBoost
+  x_train <- model.matrix(event ~ . - 1, data = train_data)  # Feature matrix for training
+  y_train <- as.numeric(train_data$event == "yes")  # Convert event labels to binary format (0 = no, 1 = yes)
+  x_test <- model.matrix(event ~ . - 1, data = test_data)  # Feature matrix for testing
+  
+  # Train an XGBoost model with default hyperparameters
+  # - nrounds = 100: Number of boosting iterations
+  # - objective = "binary:logistic": Binary classification using logistic regression
+  # - verbose = 0: Suppress log output to keep console clean
+  xgb_model <- xgboost(data = x_train, 
+                       label = y_train, 
+                       nrounds = 100, 
+                       objective = "binary:logistic", 
+                       verbose = 0)
+
+  # Generate probability predictions for the test dataset
+  predict_probabilities_xgb <- predict(xgb_model, x_test)
+  
+  # Convert probability predictions into binary class labels (yes/no) using a threshold of 0.5
+  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > 0.5, "yes", "no")
+  
+  # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
+  confusion_matrix_xgb <- table(Predicted = binary_prediction_xgb, Actual = test_data$event)
+  
+  # Evaluate model performance using key classification metrics (accuracy, precision, recall, F1-score)
+  metrics_xgb <- calculate_model_metrics(confusion_matrix_xgb, predict_probabilities_xgb, "XGBoost")
+  
+  # Store the calculated metrics in a structured dataframe for easy comparison
+  metrics_xgb_dataframe <- get_dataframe("XGBoost", metrics_xgb)
+  
+  # Return both the detailed metrics list and the formatted dataframe
+  return (list(metrics_xgb_dataframe = metrics_xgb_dataframe, metrics_xgb = metrics_xgb))
+}
+```
+
+### def GBM
+
+The `GBM` function implements a **Gradient Boosting Machine (GBM)** model to predict binary outcomes using decision trees. It begins by **preprocessing the data**, converting it to `data.table` format for efficient handling, standardizing numeric features, and encoding the event variable as **0 (no) or 1 (yes)**. The function then trains a GBM model with **100 boosting iterations and a tree depth of 3**, which balances model complexity and overfitting risks. After training, it predicts **probabilities** on the test dataset, converts them into **binary classifications**, and evaluates the model’s performance using a confusion matrix and key classification metrics.
+
+```{r}
+GBM <- function(train_data, test_data) {
+  # Load required libraries
+  # library(gbm)         # GBM package for gradient boosting
+  # library(data.table)  # Efficient data handling with data.table
+  
+  # Convert train_data and test_data to data.table format for optimized processing
+  setDT(train_data)
+  setDT(test_data)
+
+  # Identify numeric features in the dataset for standardization
+  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
+
+  # Standardize numeric columns (mean = 0, standard deviation = 1) to improve model performance
+  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+
+  # Convert the target variable (event) into a numeric format for binary classification
+  # "yes" → 1 (positive event), "no" → 0 (negative event)
+  train_data[, event := ifelse(event == "yes", 1, 0)]
+  test_data[, event := ifelse(event == "yes", 1, 0)]
+
+  # Train the GBM model using gradient boosting with default hyperparameters
+  # - event ~ .: Predict the event variable using all available features.
+  # - data = train_data: Use the preprocessed training dataset for model training.
+  # - distribution = "bernoulli": Use Bernoulli distribution for binary classification (0/1 outcome).
+  # - n.trees = 100: Number of boosting iterations (reduced from 500 to speed up training).
+  # - interaction.depth = 3: Maximum depth of each tree (limits complexity to prevent overfitting).
+  gbm_model <- gbm(event ~ ., 
+                    data = train_data, 
+                    distribution = "bernoulli", 
+                    n.trees = 100, 
+                    interaction.depth = 3)
+
+  # Generate probability predictions on the test dataset using the trained model
+  predict_probabilities_gbm <- predict(gbm_model, test_data, n.trees = 100, type = "response")
+
+  # Convert probability predictions into binary class labels (yes/no) using a threshold of 0.5
+  binary_prediction_gbm <- ifelse(predict_probabilities_gbm > 0.5, "yes", "no")
+
+  # Create a confusion matrix to compare predictions vs. actual outcomes
+  confusion_matrix_gbm <- table(Predicted = binary_prediction_gbm, Actual = test_data$event)
+
+  # Evaluate model performance using key metrics: accuracy, precision, recall, and F1-score
+  metrics_gbm <- calculate_model_metrics(confusion_matrix_gbm, predict_probabilities_gbm, "GBM")
+
+  # Store the calculated metrics in a structured dataframe for easy comparison
+  metrics_gbm_dataframe <- get_dataframe("GBM", metrics_gbm)
+
+  # Return both the detailed metrics list and the formatted dataframe
+  return (list(metrics_gbm_dataframe = metrics_gbm_dataframe, metrics_gbm = metrics_gbm))
+}
+```
+
+### def elastic_net
+
+The `elastic_net` function implements an **Elastic Net Classifier**, **regularized logistic regression model** that combines **Lasso (L1) and Ridge (L2) penalties** for improved generalization. The function first preprocesses the dataset by standardizing numeric features and converting the data into a matrix format, as required by the `glmnet` package. The Elastic Net model is then trained with **α = 0.5**, meaning it applies an equal mix of Lasso and Ridge regularization. The function predicts event probabilities for the test dataset, converts them into binary classifications, and evaluates performance using accuracy, precision, recall, and F1-score.
+
+```{r}
+elastic_net <- function(train_data, test_data) {
+    # Load required libraries
+    # library(glmnet) # Required for Elastic Net (Lasso + Ridge regularization)
+    # library(data.table) # For efficient data handling using data.table
+    
+    # Convert train_data and test_data to data.table format for optimized processing
+    setDT(train_data)
+    setDT(test_data)
+    
+    # Identify numeric features in the dataset for standardization
+    numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
+
+    # Standardize numeric columns (mean = 0, standard deviation = 1) to improve model performance
+    train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+    test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+    
+    # Convert the dataset into a matrix format, as required by glmnet
+    x_train <- model.matrix(event ~ . - 1, data = train_data) # Feature matrix for training
+    y_train <- train_data$event # Target variable
+    x_test <- model.matrix(event ~ . - 1, data = test_data) # Feature matrix for testing
+    
+    # Train the Elastic Net model with a combination of Lasso (L1) and Ridge (L2) regularization
+    # alpha = 0.5 sets an equal mix of Lasso and Ridge penalties
+    elastic_net_model <- glmnet(x_train, y_train, family = "binomial", alpha = 0.5)
+
+    # Predict event probabilities for the test dataset
+    # s = 0.01 sets a specific regularization strength for prediction
+    predict_probabilities_en <- predict(elastic_net_model, s = 0.01, newx = x_test, type = "response")
+
+    # Convert probability predictions into binary class labels (yes/no) using a threshold of 0.5
+    binary_prediction_en <- ifelse(predict_probabilities_en > 0.5, "yes", "no")
+    
+    # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
+    confusion_matrix_en <- table(Predicted = binary_prediction_en, Actual = test_data$event)
+    
+    # Evaluate model performance using key classification metrics (accuracy, precision, recall, F1-score)
+    metrics_en <- calculate_model_metrics(confusion_matrix_en, predict_probabilities_en, "Elastic Net")
+    
+    # Store the calculated metrics in a structured dataframe for easy comparison
+    metrics_en_dataframe <- get_dataframe("Elastic Net", metrics_en)
+    
+    # Return both the detailed metrics list and the formatted dataframe
+    return (list(metrics_en_dataframe = metrics_en_dataframe, metrics_en = metrics_en))
+    }
+```
+
+### def XG_Boost_optimization (NOT USED)
+
+The `XG_Boost_optimization` function implements an **XGBoost classifier for binary classification**, leveraging gradient boosting decision trees. The function begins by preprocessing the dataset, standardizing numeric features, and converting categorical labels into binary format (0/1). It then trains an optimized XGBoost model using parallel processing, **tree depth of 6**, **learning rate of 0.1**, and an **80%** feature and row subsampling strategy to enhance generalization. The training process includes early stopping, which halts training if performance does not improve for **10 rounds**. After training, the function makes probability-based predictions, converts them into binary classifications, and evaluates the model using accuracy, precision, recall, and F1-score.
+
+```{r}
+XG_Boost_optimization <- function(train_data, test_data) {
+  # Load required libraries
+  # library(xgboost)  # XGBoost for gradient boosting
+  # library(data.table)  # Efficient data handling
+  
+  # Convert train_data and test_data to data.table format
+  setDT(train_data)
+  setDT(test_data)
+  
+  # Identify numeric features and scale them
+  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
+  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  
+  # Convert data to matrix format required by XGBoost
+  x_train <- model.matrix(event ~ . - 1, data = train_data)
+  y_train <- as.numeric(train_data$event == "yes")  # Convert event labels to 0/1
+  x_test <- model.matrix(event ~ . - 1, data = test_data)
+
+  # Convert to DMatrix format, which is optimized for XGBoost
+  dtrain <- xgb.DMatrix(data = x_train, label = y_train)
+  dtest <- xgb.DMatrix(data = x_test)
+  
+  # Detect available CPU cores for parallel computation
+  num_cores <- detectCores()
+
+  # Define XGBoost hyperparameters
+  # XGBoost Hyperparameter Configuration:
+  # - objective = "binary:logistic": Defines a binary classification task with logistic regression loss.
+  # - eval_metric = "logloss": Uses log-loss as the evaluation metric to measure prediction accuracy.
+  # - max_depth = 6: Sets the maximum depth of each tree (higher values increase model complexity).
+  # - eta = 0.1: Defines the learning rate (lower values prevent overfitting but require more trees).
+  # - subsample = 0.8: Randomly selects 80% of the data per boosting iteration to improve generalization.
+  # - colsample_bytree = 0.8: Uses 80% of features for each tree to reduce overfitting.
+  # - nthread = num_cores: Utilizes all available CPU cores to speed up training.
+  params <- list(
+    objective = "binary:logistic",
+    eval_metric = "logloss",
+    max_depth = 6,
+    eta = 0.1,
+    subsample = 0.8,
+    colsample_bytree = 0.8,
+    nthread = num_cores
+  )
+
+  # Train XGBoost model with early stopping
+  # XGBoost Model Training Strategy:
+  # - xgb.train(): Trains the model with the defined hyperparameters.
+  # - nrounds = 200: Runs 200 boosting iterations to enhance learning.
+  # - early_stopping_rounds = 10: Stops training if log-loss does not improve for 10 consecutive rounds.
+  # - watchlist = list(train = dtrain): Monitors training performance to optimize stopping criteria.
+  # - verbose = 0: Suppresses training logs for a cleaner output.
+  xgb_model <- xgb.train(params = params,
+                         data = dtrain,
+                         nrounds = 200,
+                         early_stopping_rounds = 10,
+                         watchlist = list(train = dtrain),
+                         verbose = 0)
+
+
+  # Predict probabilities on the test dataset
+  predict_probabilities_xgb <- predict(xgb_model, dtest)
+  
+  # Convert predicted probabilities into binary class labels (yes/no) using a threshold of 0.5
+  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > 0.5, "yes", "no")
+  
+  # Create a confusion matrix to compare predicted vs. actual outcomes
+  confusion_matrix_xgb <- table(Predicted = binary_prediction_xgb, Actual = test_data$event)
+  
+  # Evaluate model performance using accuracy, precision, recall, and F1-score
+  metrics_xgb <- calculate_model_metrics(confusion_matrix_xgb, predict_probabilities_xgb, "XGBoost")
+  
+  # Store the calculated metrics in a structured dataframe for easy comparison
+  metrics_xgb_dataframe <- get_dataframe("XGBoost", metrics_xgb)
+  
+  # Return both the detailed metrics list and the formatted dataframe
+  return (list(metrics_xgb_dataframe = metrics_xgb_dataframe, metrics_xgb = metrics_xgb))
+}
+```
+
+### def GBM_optimization (NOT USED)
+
+The `GBM_optimization` function trains a **Gradient Boosting Machine (GBM)** model to predict binary outcomes using an optimized set of hyperparameters. It first preprocesses the data by standardizing numeric features and converting categorical event labels into binary (0/1). The function then detects available CPU cores to enable parallel computation, improving training efficiency. The GBM model is trained with **300 trees, a maximum depth of 3, a learning rate of 0.01, and 80% data sampling per iteration** to balance speed and accuracy while reducing overfitting. Cross-validation (`cv.folds = 3`) is used to automatically determine the optimal number of trees. Finally, the function generates predictions on the test dataset, evaluates performance using key metrics such as accuracy, precision, recall, and F1-score, and returns a structured results dataframe.
+
+```{r}
+GBM_optimization <- function(train_data, test_data) {
+  # Load required libraries
+  # library(gbm)         # Load GBM package for gradient boosting modeling
+  # library(data.table)  # Load data.table for efficient data handling
+  # library(parallel)    # Load parallel to utilize multi-core processing
+
+  # Convert train_data and test_data to data.table format for fast operations
+  setDT(train_data)
+  setDT(test_data)
+
+  # Identify numeric features in the dataset for scaling
+  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
+
+  # Standardize numeric columns (mean = 0, standard deviation = 1)
+  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+
+  # Convert the target variable (event) into numeric format (Binary: 0 = "no", 1 = "yes")
+  train_data[, event := ifelse(event == "yes", 1, 0)]
+  test_data[, event := ifelse(event == "yes", 1, 0)]
+
+  # Detect available CPU cores for parallel processing (to speed up GBM training)
+  num_cores <- detectCores()
+
+  # Train GBM model with optimized hyperparameters for better speed and performance
+  # GBM Model Configuration:
+  # - event ~ .: Predict the event variable using all available features.
+  # - data = train_data: Use the preprocessed training dataset for model training.
+  # - distribution = "bernoulli": Use Bernoulli distribution for binary classification (0/1 outcome).
+  # - n.trees = 300: Number of boosting iterations (reduced from 500 to speed up training).
+  # - interaction.depth = 3: Maximum depth of each tree (limits complexity to prevent overfitting).
+  # - shrinkage = 0.01: Learning rate: lower values reduce overfitting but require more trees.
+  # - bag.fraction = 0.8: Fraction of training data used in each iteration (adds randomness).
+  # - train.fraction = 0.8: Use 80% of the dataset for training, leaving 20% for validation.
+  # - cv.folds = 3: 3-fold cross-validation to optimize the number of trees.
+  # - n.cores = num_cores: Enable parallel computation using all available CPU cores.
+  gbm_model <- gbm(event ~ .,  
+                 data = train_data, 
+                 distribution = "bernoulli",  
+                 n.trees = 300,  
+                 interaction.depth = 3,  
+                 shrinkage = 0.01,  
+                 bag.fraction = 0.8,  
+                 train.fraction = 0.8,  
+                 cv.folds = 3,  
+                 n.cores = num_cores)
+
+  # Automatically determine the optimal number of trees using cross-validation
+  best_trees <- gbm.perf(gbm_model, method = "cv", plot.it = FALSE) # Avoid plotting to speed up processing
+
+  # Generate probability predictions on the test dataset using the optimal number of trees
+  predict_probabilities_gbm <- predict(gbm_model, test_data, n.trees = best_trees, type = "response")
+
+  # Convert probability predictions into binary class labels (yes/no) using a threshold of 0.5
+  binary_prediction_gbm <- ifelse(predict_probabilities_gbm > 0.5, "yes", "no")
+
+  # Create a confusion matrix to compare model predictions against actual test outcomes
+  confusion_matrix_gbm <- table(Predicted = binary_prediction_gbm, Actual = test_data$event)
+
+  # Calculate model performance metrics (accuracy, precision, recall, F1-score, etc.)
+  metrics_gbm <- calculate_model_metrics(confusion_matrix_gbm, predict_probabilities_gbm, "GBM")
+
+  # Store the calculated metrics in a structured dataframe for easier comparison with other models
+  metrics_gbm_dataframe <- get_dataframe("GBM", metrics_gbm)
+
+  # Return both the detailed metrics list and the formatted dataframe
+  return (list(metrics_gbm_dataframe = metrics_gbm_dataframe, metrics_gbm = metrics_gbm))
 }
 ```
 
