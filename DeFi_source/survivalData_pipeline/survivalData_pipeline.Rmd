@@ -1,5 +1,5 @@
 ---
-title: "DMLR DeFi Survival Data Pipeline(qinh2):"
+title: "DMLR DeFi Survival Data Pipeline"
 author: "Hanzhen Qin(qinh2)"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:

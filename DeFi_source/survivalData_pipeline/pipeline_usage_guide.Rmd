@@ -1,5 +1,5 @@
 ---
-title: "DMLR DeFi Survival Data Pipeline Usage Guide(qinh2):"
+title: "DMLR DeFi Survival Data Pipeline Usage Guide"
 author: "Hanzhen Qin(qinh2)"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
@@ -10,26 +10,30 @@ output:
     number_sections: true
     df_print: paged
 ---
-```{r setup, include=FALSE}
-# Required R package installation; RUN THIS BLOCK BEFORE ATTEMPTING TO KNIT THIS NOTEBOOK!!!
-# This section installs packages if they are not already installed.
-# This block will not be shown in the knit file.
 
-knitr::opts_chunk$set(echo = TRUE)
+```{r, include=FALSE}
+# Check and install required R packages
+if (!require("conflicted")) {
+  install.packages("conflicted", dependencies = TRUE)
+  library(conflicted)
+}
 
-# Set the default CRAN repository
+# Set default CRAN repository
 local({
   r <- getOption("repos")
-  r["CRAN"] <- "http://cran.r-project.org" 
+  r["CRAN"] <- "http://cran.r-project.org"
   options(repos = r)
 })
 
-# Load required packages and install if necessary
-required_packages <- c("rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
-"randomForest", "caret", "survival", "survminer", "ggplot2", "kableExtra", "rpart", "glmnet", "data.table",
-"reshape2", "pander", "readr", "dplyr", "ROSE")
+# Define the list of required packages
+required_packages <- c(
+  "rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
+  "randomForest", "caret", "survival", "survminer", "ggplot2", 
+  "kableExtra", "rpart", "glmnet", "data.table", "reshape2", 
+  "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "gbm", "parallel"
+)
 
-# Check and install missing packages
+# Loop through the package list and install missing packages
 for (pkg in required_packages) {
   if (!require(pkg, character.only = TRUE)) {
     install.packages(pkg, dependencies = TRUE)
@@ -37,7 +41,14 @@ for (pkg in required_packages) {
   }
 }
 
-# library preference
+# Handle function name conflicts
+conflict_prefer("slice", "dplyr")
+conflict_prefer("filter", "dplyr")
+
+# Set knitr options for R Markdown
+knitr::opts_chunk$set(echo = TRUE)
+
+# Rename dplyr functions to avoid conflicts with other packages
 select <- dplyr::select
 rename <- dplyr::rename
 summarize <- dplyr::summarize
