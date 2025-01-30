@@ -2,7 +2,6 @@ library(data.table)
 library(dplyr)
 library(glmnet)
 library(rpart)
-library(randomForest)
 library(caret)
 library(e1071)
 library(parallel)
@@ -403,45 +402,4 @@ GBM_optimization <- function(train_data, test_data) {
   
   # Return both the detailed metrics list and the formatted dataframe
   return (list(metrics_gbm_dataframe = metrics_gbm_dataframe, metrics_gbm = metrics_gbm))
-}
-
-# NOT USED
-random_forest <- function(train_data, test_data) {
-  # identify and remove high-cardinality categorical columns from both datasets
-  cat_columns <- names(train_data)[sapply(train_data, is.factor)]
-  for (col in cat_columns) {
-    num_levels <- length(unique(train_data[[col]]))
-    if (num_levels > 53) {
-      train_data <- train_data %>% select(-all_of(col))
-      test_data <- test_data %>% select(-all_of(col))
-    }
-  }
-  
-  # ensure levels in test_data match train_data for all categorical variables
-  cat_columns <- names(train_data)[sapply(train_data, is.factor)]
-  for (col in cat_columns) {
-    test_data[[col]] <- factor(test_data[[col]], levels = levels(train_data[[col]]))
-  }
-  
-  # train the Random Forest model
-  random_forest_classifier <- randomForest(
-    event ~ ., 
-    data = train_data, 
-    ntree = 500, 
-    mtry = floor(sqrt(ncol(train_data) - 1)), 
-    importance = TRUE
-  )
-  
-  # predict probabilities on the testing dataset
-  predict_probabilities_rdf <- predict(random_forest_classifier, test_data, type = "response")
-  
-  # create confusion matrix and calculate metrics
-  confusion_matrix_rdf <- table(Predicted = predict_probabilities_rdf, Actual = test_data$event)
-  metrics_rdf <- calculate_model_metrics(confusion_matrix_rdf, predict_probabilities_rdf, 
-                                         "Random forest")
-  
-  # create a dataframe with the desired structure
-  metrics_rdf_dataframe <- get_dataframe("Random Forest", metrics_rdf)
-  
-  return (list(metrics_rdf_dataframe = metrics_rdf_dataframe, metrics_rdf = metrics_rdf))
 }

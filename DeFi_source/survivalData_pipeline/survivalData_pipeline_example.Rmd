@@ -28,7 +28,7 @@ local({
 # Define the list of required packages
 required_packages <- c(
   "rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
-  "randomForest", "caret", "survival", "survminer", "ggplot2", 
+  "caret", "survival", "survminer", "ggplot2", 
   "kableExtra", "rpart", "glmnet", "data.table", "reshape2", 
   "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "gbm", "parallel"
 )
