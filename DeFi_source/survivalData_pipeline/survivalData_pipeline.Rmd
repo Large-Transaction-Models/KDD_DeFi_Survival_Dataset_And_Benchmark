@@ -69,7 +69,7 @@ group_by <- dplyr::group_by
   `specific_accuracy_statistics`, `combine_accuracy_dataframes`
   
   * Classification model: `logistic_regression`, `decision_tree`, `Naive_bayes`, `XG_Boost`, `GBM`, 
-  `elastic_net`, `XG_Boost_optimization (NOT USED)`, `GBM_optimization (NOT USED)`, `random_forest (NOT USED)`
+  `elastic_net`, `XG_Boost_optimization (NOT USED)`, `GBM_optimization (NOT USED)`
   
 
 ## Data Preprocessing
@@ -900,51 +900,5 @@ GBM_optimization <- function(train_data, test_data) {
 
   # Return both the detailed metrics list and the formatted dataframe
   return (list(metrics_gbm_dataframe = metrics_gbm_dataframe, metrics_gbm = metrics_gbm))
-}
-```
-
-### def random_forest (NOT USED)
-
-The `random_forest` function trains a Random Forest classification model on the provided training data after preparing it by removing high-cardinality categorical columns (those with more than 53 unique levels), which could hinder model performance. The function then optimizes the model with hyperparameters, specifically tuning the number of trees (`ntree`) and the `mtry` parameter for optimal feature selection. After training, it predicts event probabilities on the testing data, generates a confusion matrix to assess prediction accuracy, and calculates relevant model performance metrics. 
-
-```{r}
-random_forest <- function(train_data, test_data) {
-  # identify and remove high-cardinality categorical columns from both datasets
-  cat_columns <- names(train_data)[sapply(train_data, is.factor)]
-  for (col in cat_columns) {
-    num_levels <- length(unique(train_data[[col]]))
-    if (num_levels > 53) {
-      train_data <- train_data %>% select(-all_of(col))
-      test_data <- test_data %>% select(-all_of(col))
-    }
-  }
-
-  # ensure levels in test_data match train_data for all categorical variables
-  cat_columns <- names(train_data)[sapply(train_data, is.factor)]
-  for (col in cat_columns) {
-    test_data[[col]] <- factor(test_data[[col]], levels = levels(train_data[[col]]))
-  }
-
-  # train the Random Forest model
-  random_forest_classifier <- randomForest(
-    event ~ ., 
-    data = train_data, 
-    ntree = 500, 
-    mtry = floor(sqrt(ncol(train_data) - 1)), 
-    importance = TRUE
-  )
-
-  # predict probabilities on the testing dataset
-  predict_probabilities_rdf <- predict(random_forest_classifier, test_data, type = "response")
-
-  # create confusion matrix and calculate metrics
-  confusion_matrix_rdf <- table(Predicted = predict_probabilities_rdf, Actual = test_data$event)
-  metrics_rdf <- calculate_model_metrics(confusion_matrix_rdf, predict_probabilities_rdf, 
-                                         "Random forest")
-
-  # create a dataframe with the desired structure
-  metrics_rdf_dataframe <- get_dataframe("Random Forest", metrics_rdf)
-
-  return (list(metrics_rdf_dataframe = metrics_rdf_dataframe, metrics_rdf = metrics_rdf))
 }
 ```
