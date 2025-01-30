@@ -60,10 +60,10 @@ group_by <- dplyr::group_by
 * Project name: DMLR DeFi-LTM
 
 ```{r}
-source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/data_preprocessing.R")
-source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/model_evaluation_visual.R")
-source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/classification_models.R")
-source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/DeFi_source/survivalData_pipeline/get_classification_cutoff.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/source/survivalData_pipeline/data_preprocessing.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/source/survivalData_pipeline/model_evaluation_visual.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/source/survivalData_pipeline/classification_models.R")
+source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/source/survivalData_pipeline/get_classification_cutoff.R")
 ```
 
 ```{r}
