@@ -106,57 +106,6 @@ Naive_bayes <- function(train_data, test_data) {
   return (list(metrics_dataframe = metrics_dataframe, metrics = metrics))
 }
 
-XG_Boost <- function(train_data, test_data) {
-  # Load required libraries
-  # library(xgboost)   # XGBoost for gradient boosting
-  # library(data.table)  # Efficient data handling with data.table
-  
-  # Convert train_data and test_data to data.table format for optimized processing
-  setDT(train_data)
-  setDT(test_data)
-  
-  # Identify numeric features in the dataset for standardization
-  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
-  
-  # Standardize numeric columns (mean = 0, standard deviation = 1) to improve model performance
-  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
-  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
-  
-  # Convert data to matrix format, as required by XGBoost
-  x_train <- model.matrix(event ~ . - 1, data = train_data)  # Feature matrix for training
-  y_train <- as.numeric(train_data$event == "yes")  # Convert event labels to binary format (0 = no, 1 = yes)
-  x_test <- model.matrix(event ~ . - 1, data = test_data)  # Feature matrix for testing
-  
-  # Train an XGBoost model with default hyperparameters
-  xgb_model <- xgboost(data = x_train, 
-                       label = y_train, 
-                       nrounds = 100, 
-                       objective = "binary:logistic", 
-                       verbose = 0)
-  
-  # Generate probability predictions for the test dataset
-  predict_probabilities_xgb <- predict(xgb_model, x_test)
-  
-  # Convert probability predictions into binary class labels (yes/no) using a threshold of 0.5
-  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > 0.5, "yes", "no")
-  
-  # Ensure factor levels for confusion matrix (fix missing class issue)
-  binary_prediction_xgb <- factor(binary_prediction_xgb, levels = c("yes", "no"))
-  test_data$event <- factor(test_data$event, levels = c("yes", "no"))
-  
-  # Create a properly formatted confusion matrix
-  confusion_matrix_xgb <- table(Predicted = binary_prediction_xgb, Actual = test_data$event)
-  
-  # Evaluate model performance using key classification metrics (accuracy, precision, recall, F1-score)
-  metrics_xgb <- calculate_model_metrics(confusion_matrix_xgb, predict_probabilities_xgb, "XGBoost")
-  
-  # Store the calculated metrics in a structured dataframe for easy comparison
-  metrics_xgb_dataframe <- get_dataframe("XGBoost", metrics_xgb)
-  
-  # Return both the detailed metrics list and the formatted dataframe
-  return (list(metrics_xgb_dataframe = metrics_xgb_dataframe, metrics_xgb = metrics_xgb))
-}
-
 elastic_net <- function(train_data, test_data) {
   # Load required libraries
   # library(glmnet) # Required for Elastic Net (Lasso + Ridge regularization)
@@ -202,8 +151,7 @@ elastic_net <- function(train_data, test_data) {
   return (list(metrics_en_dataframe = metrics_en_dataframe, metrics_en = metrics_en))
 }
 
-# NOT USED
-XG_Boost_optimization <- function(train_data, test_data) {
+XG_Boost <- function(train_data, test_data) {
   # Convert train_data and test_data to data.table format
   setDT(train_data)
   setDT(test_data)

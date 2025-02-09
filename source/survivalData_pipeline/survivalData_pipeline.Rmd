@@ -69,7 +69,7 @@ group_by <- dplyr::group_by
   `specific_accuracy_statistics`, `combine_accuracy_dataframes`
   
   * Classification model: `logistic_regression`, `decision_tree`, `Naive_bayes`, `XG_Boost`, 
-  `elastic_net`, `XG_Boost_optimization (NOT USED)`
+  `elastic_net`
   
 
 ## Data Preprocessing
@@ -578,62 +578,6 @@ Naive_bayes <- function(train_data, test_data) {
 }
 ```
 
-### def XG_Boost
-
-The `XG_Boost` function implements an **XGBoost classifier** to predict binary outcomes using **gradient boosting decision trees**. The function first **preprocesses the dataset** by converting it into `data.table` format for faster operations, standardizing numeric features, and encoding event labels as **0 (no) and 1 (yes)**. It then **trains an XGBoost model with 100 boosting iterations**, using logistic regression as the objective function for binary classification. The trained model generates **probability-based predictions**, which are converted into **binary classifications** using a **threshold of 0.5**. Finally, the function evaluates the model’s performance using **a confusion matrix and key classification metrics** (accuracy, precision, recall, and F1-score) and returns the results in a structured dataframe.
-
-```{r}
-XG_Boost <- function(train_data, test_data) {
-  # Load required libraries
-  # library(xgboost)   # XGBoost for gradient boosting
-  # library(data.table)  # Efficient data handling with data.table
-  
-  # Convert train_data and test_data to data.table format for optimized processing
-  setDT(train_data)
-  setDT(test_data)
-  
-  # Identify numeric features in the dataset for standardization
-  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
-
-  # Standardize numeric columns (mean = 0, standard deviation = 1) to improve model performance
-  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
-  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
-  
-  # Convert data to matrix format, as required by XGBoost
-  x_train <- model.matrix(event ~ . - 1, data = train_data)  # Feature matrix for training
-  y_train <- as.numeric(train_data$event == "yes")  # Convert event labels to binary format (0 = no, 1 = yes)
-  x_test <- model.matrix(event ~ . - 1, data = test_data)  # Feature matrix for testing
-  
-  # Train an XGBoost model with default hyperparameters
-  # - nrounds = 100: Number of boosting iterations
-  # - objective = "binary:logistic": Binary classification using logistic regression
-  # - verbose = 0: Suppress log output to keep console clean
-  xgb_model <- xgboost(data = x_train, 
-                       label = y_train, 
-                       nrounds = 100, 
-                       objective = "binary:logistic", 
-                       verbose = 0)
-
-  # Generate probability predictions for the test dataset
-  predict_probabilities_xgb <- predict(xgb_model, x_test)
-  
-  # Convert probability predictions into binary class labels (yes/no) using a threshold of 0.5
-  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > 0.5, "yes", "no")
-  
-  # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
-  confusion_matrix_xgb <- table(Predicted = binary_prediction_xgb, Actual = test_data$event)
-  
-  # Evaluate model performance using key classification metrics (accuracy, precision, recall, F1-score)
-  metrics_xgb <- calculate_model_metrics(confusion_matrix_xgb, predict_probabilities_xgb, "XGBoost")
-  
-  # Store the calculated metrics in a structured dataframe for easy comparison
-  metrics_xgb_dataframe <- get_dataframe("XGBoost", metrics_xgb)
-  
-  # Return both the detailed metrics list and the formatted dataframe
-  return (list(metrics_xgb_dataframe = metrics_xgb_dataframe, metrics_xgb = metrics_xgb))
-}
-```
-
 ### def elastic_net
 
 The `elastic_net` function implements an **Elastic Net Classifier**, **regularized logistic regression model** that combines **Lasso (L1) and Ridge (L2) penalties** for improved generalization. The function first preprocesses the dataset by standardizing numeric features and converting the data into a matrix format, as required by the `glmnet` package. The Elastic Net model is then trained with **α = 0.5**, meaning it applies an equal mix of Lasso and Ridge regularization. The function predicts event probabilities for the test dataset, converts them into binary classifications, and evaluates performance using accuracy, precision, recall, and F1-score.
@@ -685,12 +629,12 @@ elastic_net <- function(train_data, test_data) {
     }
 ```
 
-### def XG_Boost_optimization (NOT USED)
+### def XG_Boost
 
-The `XG_Boost_optimization` function implements an **XGBoost classifier for binary classification**, leveraging gradient boosting decision trees. The function begins by preprocessing the dataset, standardizing numeric features, and converting categorical labels into binary format (0/1). It then trains an optimized XGBoost model using parallel processing, **tree depth of 6**, **learning rate of 0.1**, and an **80%** feature and row subsampling strategy to enhance generalization. The training process includes early stopping, which halts training if performance does not improve for **10 rounds**. After training, the function makes probability-based predictions, converts them into binary classifications, and evaluates the model using accuracy, precision, recall, and F1-score.
+The `XG_Boost` function implements an **XGBoost classifier for binary classification**, leveraging gradient boosting decision trees. The function begins by preprocessing the dataset, standardizing numeric features, and converting categorical labels into binary format (0/1). It then trains an optimized XGBoost model using parallel processing, **tree depth of 6**, **learning rate of 0.1**, and an **80%** feature and row subsampling strategy to enhance generalization. The training process includes early stopping, which halts training if performance does not improve for **10 rounds**. After training, the function makes probability-based predictions, converts them into binary classifications, and evaluates the model using accuracy, precision, recall, and F1-score.
 
 ```{r}
-XG_Boost_optimization <- function(train_data, test_data) {
+XG_Boost <- function(train_data, test_data) {
   # Convert train_data and test_data to data.table format
   setDT(train_data)
   setDT(test_data)

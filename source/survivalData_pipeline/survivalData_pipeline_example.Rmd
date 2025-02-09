@@ -113,25 +113,22 @@ After obtaining the train and test data, we will apply all the classification mo
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-pander(accuracy_lr_dataframe)
 ```
 
 ```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
-pander(accuracy_dt_dataframe)
 ```
 
 ```{r}
 nb_return = Naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_dataframe
 accuracy_nb = nb_return$metrics
-pander(accuracy_nb_dataframe)
 ```
 
 ```{r}
-xgb_return = XG_Boost_optimization(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
@@ -204,7 +201,7 @@ accuracy_nb = nb_return$metrics
 ```
 
 ```{r}
-xgb_return = XG_Boost_optimization(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
@@ -282,7 +279,7 @@ accuracy_nb = nb_return$metrics
 ```
 
 ```{r}
-xgb_return = XG_Boost_optimization(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
@@ -360,7 +357,7 @@ accuracy_nb = nb_return$metrics
 ```
 
 ```{r}
-xgb_return = XG_Boost_optimization(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```

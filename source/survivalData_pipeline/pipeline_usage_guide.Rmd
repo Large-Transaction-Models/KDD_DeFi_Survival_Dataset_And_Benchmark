@@ -133,37 +133,26 @@ classification_model_name <- function(train_data, test_data) {
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-pander(accuracy_lr_dataframe, caption = "Logistic Regression Performance")
 ```
 
 ```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
-pander(accuracy_dt_dataframe, caption = "Decision Tree Performance")
-```
-
-```{r}
-rdf_return = random_forest(train_data, test_data)
-accuracy_rdf_dataframe = rdf_return$metrics_rdf_dataframe
-accuracy_rdf = rdf_return$metrics_rdf
-pander(accuracy_rdf_dataframe, caption = "Random Forest Performance")
 ```
 
 ```{r}
 x_return = your_classification_model(train_data, test_data)
 accuracy_x_dataframe = x_return$metrics_x_dataframe
 accuracy_x = x_return$metrics_x
-pander(accuracy_x_dataframe, caption = "Your classification models' name")
 ```
 
 ```{r}
 # compare all the classification models
 # For example, your indexEvent = "XX", outcomeEvent = "YY"
 metrics_list_XY <- list(
-  list(accuracy_lr, "Logistic Regression"),
-  list(accuracy_dt, "Decision Tree"),
-  list(accuracy_rdf, "Random Forest"),
+  list(accuracy_lr, "Logistic Regression"), 
+  list(accuracy_dt, "Decision Tree"), 
   list(accuracy_x, "Your classification models' name")
   # add more classification models accuracy metrics here, the optimal length of the list is 6.
   # If more than 6 classification models, just create a new metrics_list.
@@ -179,8 +168,7 @@ accuracy_comparison_plot(metrics_list_XY)
 data_name_XY <- paste(indexEvent, "+", outcomeEvent)
 # add more classification models dataframe here, no limited.
 accuracy_dataframe_list_XY <- list(accuracy_lr_dataframe, 
-                                accuracy_dt_dataframe,
-                                accuracy_rdf_dataframe, 
+                                accuracy_dt_dataframe, 
                                 accuracy_x_dataframe)
 combined_results_XY <- combine_classification_results(accuracy_dataframe_list_XY, data_name_XY)
 
