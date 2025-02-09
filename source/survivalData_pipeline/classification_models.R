@@ -164,7 +164,7 @@ Naive_bayes <- function(train_data, test_data) {
   metrics_dataframe = get_dataframe("Naive Bayes", metrics)
   
   # Each classification model needs to return these two variables
-  return (list(metrics_dataframe = metrics_nb_dataframe, metrics = metrics_nb))
+  return (list(metrics_nb_dataframe = metrics_nb_dataframe, metrics_nb = metrics_nb))
 }
 
 elastic_net <- function(train_data, test_data) {
