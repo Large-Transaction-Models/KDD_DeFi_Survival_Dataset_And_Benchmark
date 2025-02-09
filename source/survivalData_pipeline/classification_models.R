@@ -113,7 +113,7 @@ decision_tree <- function(train_data, test_data) {
   return (list(metrics_dt_dataframe = metrics_dt_dataframe, metrics_dt = metrics_dt))
 }
 
-Naive_bayes <- function(train_data, test_data) {
+naive_bayes <- function(train_data, test_data) {
   # library(e1071)
   # library(caret) # Load caret for data partitioning
   
@@ -158,10 +158,10 @@ Naive_bayes <- function(train_data, test_data) {
   # Evaluate model performance with a confusion matrix for test set
   conf_matrix <- table(Predicted = predictions, Actual = test_labels)
   
-  metrics <- calculate_model_metrics(conf_matrix, prediction_probabilities, "Naive Bayes")
+  metrics_nb <- calculate_model_metrics(conf_matrix, prediction_probabilities, "Naive Bayes")
   
   # Create a dataframe with the desired structure
-  metrics_dataframe = get_dataframe("Naive Bayes", metrics)
+  metrics_nb_dataframe = get_dataframe("Naive Bayes", metrics_nb)
   
   # Each classification model needs to return these two variables
   return (list(metrics_nb_dataframe = metrics_nb_dataframe, metrics_nb = metrics_nb))
