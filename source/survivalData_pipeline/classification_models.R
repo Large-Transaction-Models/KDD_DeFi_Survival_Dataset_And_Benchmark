@@ -13,97 +13,158 @@ logistic_regression <- function(train_data, test_data) {
   # ensure train_data and test_data are in the data.table format for fast operations
   setDT(train_data)
   setDT(test_data)
-  # identify numeric features in the dataset, and scale them to have mean = 0 and standard
-  # deviation = 1
-  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
-  # scale numeric columns in train set
-  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
-  # scale numeric columns in test set
+  
+  # Split train_data into train_set (80%) and validation_set (20%)
+  set.seed(123)  # ensure reproducibility
+  trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
+  train_set <- train_data[trainIndex, ]
+  validation_set <- train_data[-trainIndex, ]
+  
+  # Identify numeric features in the dataset, and scale them to have mean = 0 and standard deviation = 1
+  numeric_features <- names(train_set)[sapply(train_set, is.numeric)]
+  
+  # Scale numeric columns in train set
+  train_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  # Scale numeric columns in validation set
+  validation_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  # Scale numeric columns in test set
   test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
-  # convert the training and testing datasets to matrix format as required by the glmnet package
+  
+  # Convert the training, validation, and testing datasets to matrix format as required by the glmnet package
   # model matrix function excludes the intercept (-1) and converts data for glmnet
-  x_train <- model.matrix(event ~ . - 1, data = train_data)  
-  y_train <- train_data$event  # extract the target variable from the training data
-  # convert test set features to matrix format
+  x_train <- model.matrix(event ~ . - 1, data = train_set)  
+  y_train <- train_set$event  # extract the target variable from the training data
+  
+  x_validation <- model.matrix(event ~ . - 1, data = validation_set)  
   x_test <- model.matrix(event ~ . - 1, data = test_data)  
-  # apply logistic regression with Lasso regularization (alpha = 1 means Lasso)
+  
+  # Apply logistic regression with Lasso regularization (alpha = 1 means Lasso)
   # 'family = binomial' specifies logistic regression for binary classification
   logistic_regression_classifier <- glmnet(x_train, y_train, family = "binomial", alpha = 1)
-  # predict the probability of the event (outcome) on the test set
-  # use a fixed regularization parameter lambda = 0.01 for prediction
-  predict_probabilities_lr <- 
-    predict(logistic_regression_classifier, s = 0.01, newx = x_test, type = "response")
-  # convert the predicted probabilities into binary class labels (yes or no)
-  binary_prediction_lr <- ifelse(predict_probabilities_lr > 0.5, "yes", "no")
-  # create a confusion matrix to compare predicted vs. actual outcomes in the test set
-  confusion_matrix_lr <- table(Predicted = binary_prediction_lr, Actual = test_data$event)
-  # evaluate model performance by calculating metrics such as accuracy, precision, recall, etc.
-  metrics_lr <- 
-    calculate_model_metrics(confusion_matrix_lr, predict_probabilities_lr, "Logistic regression")
-  # create a dataframe with the desired structure
+  
+  # Use validation set to select the best lambda value
+  lambda_values <- logistic_regression_classifier$lambda  # Get available lambda values
+  cv_model <- cv.glmnet(x_train, y_train, family = "binomial", alpha = 1)  # Cross-validation
+  best_lambda <- cv_model$lambda.min  # Select the best lambda based on cross-validation
+  
+  # Predict the probability of the event (outcome) on the validation set
+  predict_probabilities_val <- predict(logistic_regression_classifier, s = best_lambda, newx = x_validation, type = "response")
+  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  validation_conf_matrix <- table(Predicted = binary_prediction_val, Actual = validation_set$event)
+  
+  # Evaluate validation set performance
+  validation_metrics <- calculate_model_metrics(validation_conf_matrix, predict_probabilities_val, "Logistic Regression (Validation)")
+  
+  # Predict the probability of the event (outcome) on the test set using the best lambda
+  predict_probabilities_test <- predict(logistic_regression_classifier, s = best_lambda, newx = x_test, type = "response")
+  binary_prediction_test <- ifelse(predict_probabilities_test > 0.5, "yes", "no")
+  
+  # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
+  test_conf_matrix <- table(Predicted = binary_prediction_test, Actual = test_data$event)
+  
+  # Evaluate model performance by calculating metrics such as accuracy, precision, recall, etc.
+  metrics_lr <- calculate_model_metrics(test_conf_matrix, predict_probabilities_test, "Logistic Regression")
+  
+  # Create a dataframe with the desired structure
   metrics_lr_dataframe = get_dataframe("Logistic Regression", metrics_lr)
   return (list(metrics_lr_dataframe = metrics_lr_dataframe, metrics_lr = metrics_lr))
 }
 
 decision_tree <- function(train_data, test_data) {
   # library(rpart)
-  # train the decision tree model with hyperparameter tuning
+  # library(caret) # Load caret for data partitioning
+  
+  # Split train_data into train_set (80%) and validation_set (20%)
+  set.seed(123) # ensure reproducibility
+  trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
+  train_set <- train_data[trainIndex, ]
+  validation_set <- train_data[-trainIndex, ]
+  
+  # Train the decision tree model with hyperparameter tuning
   decision_tree_classifier <- rpart(
     event ~ .,
-    data = train_data,
+    data = train_set,
     method = "class",
     control = rpart.control(
-      # complexity parameter for pruning
+      # Complexity parameter for pruning
       cp = 0.01,
-      # maximum depth of the tree
+      # Maximum depth of the tree
       maxdepth = 30,
-      # minimum number of observations needed to split a node
+      # Minimum number of observations needed to split a node
       minsplit = 20
     )
   )
-  # predict on the testing dataset
+  # Predict on the validation dataset
+  predict_probabilities_val <- predict(decision_tree_classifier, validation_set, type = "class")
+  validation_conf_matrix <- table(Predicted = predict_probabilities_val, Actual = validation_set$event)
+  
+  # Evaluate validation performance
+  validation_metrics <- calculate_model_metrics(validation_conf_matrix, predict_probabilities_val, "Decision Tree (Validation)")
+  
+  # Predict on the testing dataset
   predict_probabilities_dt <- predict(decision_tree_classifier, test_data, type = "class")
-  # confusion matrix and metrics
-  confusion_matrix_dt <- table(Predicted = predict_probabilities_dt, Actual = test_data$event)
-  metrics_dt <- calculate_model_metrics(confusion_matrix_dt, predict_probabilities_dt, 
-                                        "Decision tree")
-  # create a dataframe with the desired structure
+  test_conf_matrix <- table(Predicted = predict_probabilities_dt, Actual = test_data$event)
+  
+  # Evaluate model performance
+  metrics_dt <- calculate_model_metrics(test_conf_matrix, predict_probabilities_dt, "Decision Tree")
+  
+  # Create a dataframe with the desired structure
   metrics_dt_dataframe = get_dataframe("Decision Tree", metrics_dt)
   return (list(metrics_dt_dataframe = metrics_dt_dataframe, metrics_dt = metrics_dt))
 }
 
 Naive_bayes <- function(train_data, test_data) {
   # library(e1071)
+  # library(caret) # Load caret for data partitioning
+  
   target_column = "event"
+  
   # Convert the target column to a factor if it's not already
   train_data[[target_column]] <- as.factor(train_data[[target_column]])
   test_labels <- as.factor(test_data[[target_column]])
   
-  # Remove the target column from the test set for prediction
-  test_features <- test_data %>%
-    select(-all_of(target_column))
+  # Split train_data into train_set (80%) and validation_set (20%)
+  set.seed(123)  # ensure reproducibility
+  trainIndex <- createDataPartition(train_data[[target_column]], p = 0.8, list = FALSE)
+  train_set <- train_data[trainIndex, ]
+  validation_set <- train_data[-trainIndex, ]
   
-  # Train Naive Bayes model
-  nb_model <- naiveBayes(as.formula(paste(target_column, "~ .")), data = train_data)
+  # Remove the target column from the validation and test sets for prediction
+  validation_features <- validation_set %>% select(-all_of(target_column))
+  test_features <- test_data %>% select(-all_of(target_column))
+  
+  # Train Naive Bayes model on train_set
+  nb_model <- naiveBayes(as.formula(paste(target_column, "~ .")), data = train_set)
+  
+  # Make predictions on the validation set
+  validation_predictions <- predict(nb_model, validation_features)
+  
+  # Get prediction probabilities for validation set
+  validation_probabilities <- predict(nb_model, validation_features, type = "raw")
+  
+  # Evaluate model performance with a confusion matrix for validation set
+  validation_conf_matrix <- table(Predicted = validation_predictions, Actual = validation_set[[target_column]])
+  validation_metrics <- calculate_model_metrics(validation_conf_matrix, validation_probabilities, "Naive Bayes (Validation)")
   
   # Make predictions on the test set
   predictions <- predict(nb_model, test_features)
   
-  # Get prediction probabilities
+  # Get prediction probabilities for test set
   prediction_probabilities <- predict(nb_model, test_features, type = "raw")
   
   # Ensure both predicted and actual labels are factors with the same levels
   predictions <- factor(predictions, levels = levels(test_labels))
   
-  # Evaluate model performance with a confusion matrix
+  # Evaluate model performance with a confusion matrix for test set
   conf_matrix <- table(Predicted = predictions, Actual = test_labels)
   
-  metrics <- calculate_model_metrics(conf_matrix, prediction_probabilities, 
-                                     "Naive Bayes")
-  # create a dataframe with the desired structure
+  metrics <- calculate_model_metrics(conf_matrix, prediction_probabilities, "Naive Bayes")
+  
+  # Create a dataframe with the desired structure
   metrics_dataframe = get_dataframe("Naive Bayes", metrics)
-  # each classification models need to return these two variables
-  return (list(metrics_dataframe = metrics_dataframe, metrics = metrics))
+  
+  # Each classification model needs to return these two variables
+  return (list(metrics_dataframe = metrics_nb_dataframe, metrics = metrics_nb))
 }
 
 elastic_net <- function(train_data, test_data) {
@@ -115,27 +176,44 @@ elastic_net <- function(train_data, test_data) {
   setDT(train_data)
   setDT(test_data)
   
+  # Split train_data into train_set (80%) and validation_set (20%)
+  set.seed(123)  # ensure reproducibility
+  trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
+  train_set <- train_data[trainIndex, ]
+  validation_set <- train_data[-trainIndex, ]
+  
   # Identify numeric features in the dataset for standardization
-  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
+  numeric_features <- names(train_set)[sapply(train_set, is.numeric)]
   
   # Standardize numeric columns (mean = 0, standard deviation = 1) to improve model performance
-  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  train_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  validation_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
   test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
   
   # Convert the dataset into a matrix format, as required by glmnet
-  x_train <- model.matrix(event ~ . - 1, data = train_data) # Feature matrix for training
-  y_train <- train_data$event # Target variable
+  x_train <- model.matrix(event ~ . - 1, data = train_set) # Feature matrix for training
+  y_train <- train_set$event # Target variable
+  x_validation <- model.matrix(event ~ . - 1, data = validation_set) # Feature matrix for validation
   x_test <- model.matrix(event ~ . - 1, data = test_data) # Feature matrix for testing
   
   # Train the Elastic Net model with a combination of Lasso (L1) and Ridge (L2) regularization
   # alpha = 0.5 sets an equal mix of Lasso and Ridge penalties
   elastic_net_model <- glmnet(x_train, y_train, family = "binomial", alpha = 0.5)
   
-  # Predict event probabilities for the test dataset
-  # s = 0.01 sets a specific regularization strength for prediction
-  predict_probabilities_en <- predict(elastic_net_model, s = 0.01, newx = x_test, type = "response")
+  # Use cross-validation to determine the best lambda value
+  cv_model <- cv.glmnet(x_train, y_train, family = "binomial", alpha = 0.5)
+  best_lambda <- cv_model$lambda.min
   
-  # Convert probability predictions into binary class labels (yes/no) using a threshold of 0.5
+  # Predict event probabilities for the validation dataset
+  predict_probabilities_val <- predict(elastic_net_model, s = best_lambda, newx = x_validation, type = "response")
+  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  validation_conf_matrix <- table(Predicted = binary_prediction_val, Actual = validation_set$event)
+  
+  # Evaluate validation performance
+  validation_metrics <- calculate_model_metrics(validation_conf_matrix, predict_probabilities_val, "Elastic Net (Validation)")
+  
+  # Predict event probabilities for the test dataset using the best lambda
+  predict_probabilities_en <- predict(elastic_net_model, s = best_lambda, newx = x_test, type = "response")
   binary_prediction_en <- ifelse(predict_probabilities_en > 0.5, "yes", "no")
   
   # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
@@ -156,18 +234,28 @@ XG_Boost <- function(train_data, test_data) {
   setDT(train_data)
   setDT(test_data)
   
+  # Split train_data into train_set (80%) and validation_set (20%)
+  set.seed(123)  # ensure reproducibility
+  trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
+  train_set <- train_data[trainIndex, ]
+  validation_set <- train_data[-trainIndex, ]
+  
   # Identify numeric features and scale them
-  numeric_features <- names(train_data)[sapply(train_data, is.numeric)]
-  train_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  numeric_features <- names(train_set)[sapply(train_set, is.numeric)]
+  train_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  validation_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
   test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
   
   # Convert data to matrix format required by XGBoost
-  x_train <- model.matrix(event ~ . - 1, data = train_data)
-  y_train <- as.numeric(train_data$event == "yes")  # Convert event labels to 0/1
+  x_train <- model.matrix(event ~ . - 1, data = train_set)
+  y_train <- as.numeric(train_set$event == "yes")  # Convert event labels to 0/1
+  x_validation <- model.matrix(event ~ . - 1, data = validation_set)
+  y_validation <- as.numeric(validation_set$event == "yes")
   x_test <- model.matrix(event ~ . - 1, data = test_data)
   
   # Convert to DMatrix format, which is optimized for XGBoost
   dtrain <- xgb.DMatrix(data = x_train, label = y_train)
+  dvalidation <- xgb.DMatrix(data = x_validation, label = y_validation)
   dtest <- xgb.DMatrix(data = x_test)
   
   # Detect available CPU cores for parallel computation
@@ -184,18 +272,24 @@ XG_Boost <- function(train_data, test_data) {
     nthread = num_cores
   )
   
-  # Train XGBoost model with early stopping
+  # Train XGBoost model with early stopping using validation set
   xgb_model <- xgb.train(params = params,
                          data = dtrain,
                          nrounds = 200,
                          early_stopping_rounds = 10,
-                         watchlist = list(train = dtrain),
+                         watchlist = list(train = dtrain, validation = dvalidation),
                          verbose = 0)
+  
+  # Predict probabilities on the validation dataset
+  predict_probabilities_val <- predict(xgb_model, dvalidation)
+  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  validation_conf_matrix <- table(Predicted = binary_prediction_val, Actual = validation_set$event)
+  
+  # Evaluate validation set performance
+  validation_metrics <- calculate_model_metrics(validation_conf_matrix, predict_probabilities_val, "XGBoost (Validation)")
   
   # Predict probabilities on the test dataset
   predict_probabilities_xgb <- predict(xgb_model, dtest)
-  
-  # Convert predicted probabilities into binary class labels (yes/no) using a threshold of 0.5
   binary_prediction_xgb <- ifelse(predict_probabilities_xgb > 0.5, "yes", "no")
   binary_prediction_xgb <- factor(binary_prediction_xgb, levels = c("yes", "no"))
   test_data$event <- factor(test_data$event, levels = c("yes", "no"))
