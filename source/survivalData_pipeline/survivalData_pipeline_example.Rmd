@@ -30,7 +30,7 @@ required_packages <- c(
   "rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
   "caret", "survival", "survminer", "ggplot2", 
   "kableExtra", "rpart", "glmnet", "data.table", "reshape2", 
-  "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "gbm", "parallel"
+  "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "parallel"
 )
 
 # Loop through the package list and install missing packages
@@ -131,15 +131,9 @@ pander(accuracy_nb_dataframe)
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost_optimization(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-gbm_return = GBM(train_data, test_data)
-accuracy_gbm_dataframe = gbm_return$metrics_gbm_dataframe
-accuracy_gbm = gbm_return$metrics_gbm
 ```
 
 ```{r}
@@ -155,7 +149,6 @@ metrics_list_BD <- list(
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_gbm, "GBM"), 
   list(accuracy_en, "Elastic Net")
 )
 accuracy_comparison_plot(metrics_list_BD)
@@ -167,7 +160,7 @@ accuracy_comparison_plot(metrics_list_BD)
 data_name_BD <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BD <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_gbm_dataframe, accuracy_en_dataframe)
+                                   accuracy_en_dataframe)
 combined_results_BD <- combine_classification_results(accuracy_dataframe_list_BD, data_name_BD)
 
 # display the combined dataframe
@@ -211,15 +204,9 @@ accuracy_nb = nb_return$metrics
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost_optimization(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-gbm_return = GBM(train_data, test_data)
-accuracy_gbm_dataframe = gbm_return$metrics_gbm_dataframe
-accuracy_gbm = gbm_return$metrics_gbm
 ```
 
 ```{r}
@@ -235,7 +222,6 @@ metrics_list_BR <- list(
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_gbm, "GBM"), 
   list(accuracy_en, "Elastic Net")
 )
 accuracy_comparison_plot(metrics_list_BR)
@@ -246,8 +232,8 @@ accuracy_comparison_plot(metrics_list_BR)
 # including the classification model name, accuracy, data combination name.
 data_name_BR <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BR <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
-                                   accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_gbm_dataframe, accuracy_en_dataframe)
+                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
+                                    accuracy_en_dataframe)
 combined_results_BR <- combine_classification_results(accuracy_dataframe_list_BR, data_name_BR)
 
 # display the combined dataframe
@@ -296,15 +282,9 @@ accuracy_nb = nb_return$metrics
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost_optimization(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-gbm_return = GBM(train_data, test_data)
-accuracy_gbm_dataframe = gbm_return$metrics_gbm_dataframe
-accuracy_gbm = gbm_return$metrics_gbm
 ```
 
 ```{r}
@@ -320,7 +300,6 @@ metrics_list_BW <- list(
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_gbm, "GBM"), 
   list(accuracy_en, "Elastic Net")
 )
 accuracy_comparison_plot(metrics_list_BW)
@@ -332,7 +311,7 @@ accuracy_comparison_plot(metrics_list_BW)
 data_name_BW <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BW <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_gbm_dataframe, accuracy_en_dataframe)
+                                   accuracy_en_dataframe)
 combined_results_BW <- combine_classification_results(accuracy_dataframe_list_BW, data_name_BW)
 
 # display the combined dataframe
@@ -381,15 +360,9 @@ accuracy_nb = nb_return$metrics
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost_optimization(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-gbm_return = GBM(train_data, test_data)
-accuracy_gbm_dataframe = gbm_return$metrics_gbm_dataframe
-accuracy_gbm = gbm_return$metrics_gbm
 ```
 
 ```{r}
@@ -405,7 +378,6 @@ metrics_list_BAL <- list(
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_gbm, "GBM"), 
   list(accuracy_en, "Elastic Net")
 )
 accuracy_comparison_plot(metrics_list_BAL)
@@ -417,7 +389,7 @@ accuracy_comparison_plot(metrics_list_BAL)
 data_name_BAL <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BAL <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_gbm_dataframe, accuracy_en_dataframe)
+                                   accuracy_en_dataframe)
 combined_results_BAL <- combine_classification_results(accuracy_dataframe_list_BAL, data_name_BAL)
 
 # display the combined dataframe
