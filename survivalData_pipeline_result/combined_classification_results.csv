@@ -2,84 +2,70 @@ Model,Class_Accuracy,Negative_1_Accuracy,Balanced_Accuracy,Overall_Accuracy,Prec
 Logistic Regression,99%,2%,50%,63%,50%,3%,borrow + account liquidated
 Decision Tree,100%,2%,51%,19%,99%,3%,borrow + account liquidated
 Naive Bayes,100%,2%,51%,21%,97%,3%,borrow + account liquidated
-XGBoost,99%,0%,49%,98%,0%,NaN%,borrow + account liquidated
-GBM,99%,0%,49%,98%,0%,NaN%,borrow + account liquidated
+XGBoost,0%,99%,49%,98%,99%,99%,borrow + account liquidated
 Elastic Net,99%,2%,50%,62%,52%,3%,borrow + account liquidated
 Logistic Regression,93%,33%,63%,67%,80%,47%,borrow + deposit
 Decision Tree,83%,44%,64%,81%,7%,13%,borrow + deposit
 Naive Bayes,88%,44%,66%,79%,47%,45%,borrow + deposit
-XGBoost,82%,41%,62%,82%,1%,2%,borrow + deposit
-GBM,83%,41%,62%,80%,16%,23%,borrow + deposit
+XGBoost,53%,82%,67%,82%,100%,90%,borrow + deposit
 Elastic Net,94%,33%,63%,66%,80%,46%,borrow + deposit
 Logistic Regression,74%,73%,74%,74%,62%,67%,borrow + repay
 Decision Tree,76%,66%,71%,71%,69%,68%,borrow + repay
 Naive Bayes,64%,79%,72%,67%,33%,47%,borrow + repay
-XGBoost,69%,59%,64%,65%,60%,59%,borrow + repay
-GBM,64%,90%,77%,68%,29%,44%,borrow + repay
+XGBoost,66%,71%,68%,69%,77%,74%,borrow + repay
 Elastic Net,74%,73%,73%,74%,62%,67%,borrow + repay
 Logistic Regression,95%,28%,62%,69%,80%,41%,borrow + withdraw
 Decision Tree,87%,40%,64%,86%,6%,11%,borrow + withdraw
 Naive Bayes,92%,41%,66%,83%,51%,45%,borrow + withdraw
-XGBoost,86%,12%,49%,86%,0%,1%,borrow + withdraw
-GBM,89%,39%,64%,84%,27%,32%,borrow + withdraw
+XGBoost,24%,86%,55%,86%,100%,92%,borrow + withdraw
 Elastic Net,95%,28%,62%,68%,80%,41%,borrow + withdraw
 Logistic Regression,96%,29%,62%,60%,89%,43%,deposit + borrow
 Decision Tree,100%,17%,59%,17%,100%,29%,deposit + borrow
 Naive Bayes,86%,19%,52%,43%,70%,30%,deposit + borrow
 XGBoost,NaN%,83%,NaN%,83%,100%,91%,deposit + borrow
-GBM,99%,0%,49%,98%,0%,NaN%,deposit + borrow
 Elastic Net,96%,28%,62%,60%,89%,43%,deposit + borrow
 Logistic Regression,95%,31%,63%,65%,83%,45%,deposit + repay
 Decision Tree,100%,17%,59%,17%,100%,29%,deposit + repay
 Naive Bayes,79%,16%,48%,32%,70%,26%,deposit + repay
 XGBoost,NaN%,83%,NaN%,83%,100%,91%,deposit + repay
-GBM,NaN%,NaN%,NaN%,NaN%,NaN%,NaN%,deposit + repay
 Elastic Net,95%,30%,63%,64%,84%,45%,deposit + repay
 Logistic Regression,77%,74%,76%,77%,50%,59%,deposit + withdraw
 Decision Tree,82%,75%,78%,80%,62%,68%,deposit + withdraw
 Naive Bayes,71%,73%,72%,71%,26%,39%,deposit + withdraw
-XGBoost,74%,78%,76%,77%,90%,84%,deposit + withdraw
-GBM,NaN%,NaN%,NaN%,NaN%,NaN%,NaN%,deposit + withdraw
+XGBoost,82%,77%,79%,78%,95%,85%,deposit + withdraw
 Elastic Net,78%,74%,76%,77%,51%,60%,deposit + withdraw
 Logistic Regression,100%,1%,50%,62%,42%,1%,repay + account liquidated
 Decision Tree,100%,3%,51%,98%,8%,4%,repay + account liquidated
 Naive Bayes,100%,1%,50%,52%,55%,1%,repay + account liquidated
-XGBoost,1%,100%,50%,24%,23%,38%,repay + account liquidated
-GBM,NaN%,NaN%,NaN%,NaN%,NaN%,NaN%,repay + account liquidated
+XGBoost,1%,100%,50%,24%,24%,38%,repay + account liquidated
 Elastic Net,100%,1%,50%,60%,47%,1%,repay + account liquidated
 Logistic Regression,78%,84%,81%,79%,50%,63%,repay + borrow
 Decision Tree,81%,75%,78%,79%,61%,67%,repay + borrow
 Naive Bayes,72%,65%,69%,71%,36%,47%,repay + borrow
-XGBoost,70%,72%,71%,72%,92%,81%,repay + borrow
-GBM,NaN%,NaN%,NaN%,NaN%,NaN%,NaN%,repay + borrow
+XGBoost,73%,75%,74%,74%,91%,82%,repay + borrow
 Elastic Net,78%,84%,81%,79%,50%,63%,repay + borrow
 Logistic Regression,94%,33%,63%,64%,83%,48%,repay + deposit
 Decision Tree,95%,28%,62%,53%,90%,43%,repay + deposit
 Naive Bayes,89%,46%,67%,78%,56%,51%,repay + deposit
-XGBoost,82%,82%,82%,82%,99%,90%,repay + deposit
-GBM,NaN%,NaN%,NaN%,NaN%,NaN%,NaN%,repay + deposit
+XGBoost,69%,82%,76%,82%,99%,90%,repay + deposit
 Elastic Net,94%,33%,63%,64%,83%,48%,repay + deposit
 Logistic Regression,92%,32%,62%,68%,72%,44%,repay + withdraw
 Decision Tree,83%,34%,59%,82%,5%,9%,repay + withdraw
 Naive Bayes,91%,47%,69%,81%,58%,52%,repay + withdraw
-XGBoost,25%,82%,54%,82%,100%,90%,repay + withdraw
-GBM,NaN%,NaN%,NaN%,NaN%,NaN%,NaN%,repay + withdraw
+XGBoost,3%,82%,43%,82%,100%,90%,repay + withdraw
 Elastic Net,92%,32%,62%,68%,72%,44%,repay + withdraw
 Logistic Regression,98%,27%,62%,64%,92%,42%,withdraw + borrow
 Decision Tree,85%,13%,49%,40%,59%,22%,withdraw + borrow
 Naive Bayes,91%,28%,59%,74%,52%,36%,withdraw + borrow
 XGBoost,NaN%,86%,NaN%,86%,100%,92%,withdraw + borrow
-GBM,NaN%,NaN%,NaN%,NaN%,NaN%,NaN%,withdraw + borrow
 Elastic Net,98%,27%,62%,63%,93%,41%,withdraw + borrow
 Logistic Regression,96%,26%,61%,62%,87%,41%,withdraw + repay
 Decision Tree,85%,15%,50%,41%,62%,24%,withdraw + repay
 Naive Bayes,91%,43%,67%,82%,53%,47%,withdraw + repay
-XGBoost,49%,85%,67%,85%,100%,92%,withdraw + repay
-GBM,NaN%,NaN%,NaN%,NaN%,NaN%,NaN%,withdraw + repay
+XGBoost,NaN%,85%,NaN%,85%,100%,92%,withdraw + repay
 Elastic Net,97%,27%,62%,61%,89%,41%,withdraw + repay
 Logistic Regression,83%,82%,83%,83%,45%,58%,withdraw + deposit
 Decision Tree,87%,77%,82%,85%,62%,69%,withdraw + deposit
 Naive Bayes,81%,69%,75%,80%,41%,51%,withdraw + deposit
-XGBoost,53%,87%,70%,75%,79%,83%,withdraw + deposit
-GBM,NaN%,NaN%,NaN%,NaN%,NaN%,NaN%,withdraw + deposit
+XGBoost,44%,95%,69%,67%,58%,72%,withdraw + deposit
 Elastic Net,83%,82%,82%,83%,45%,58%,withdraw + deposit
