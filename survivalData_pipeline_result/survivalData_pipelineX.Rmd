@@ -124,9 +124,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
@@ -197,9 +197,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 ```{r, include=FALSE}
 xgb_return = XG_Boost(train_data, test_data)
@@ -274,9 +274,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
@@ -352,9 +352,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
@@ -430,9 +430,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
@@ -508,9 +508,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
@@ -581,9 +581,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
@@ -654,9 +654,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
@@ -732,9 +732,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
@@ -810,9 +810,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
@@ -888,9 +888,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
@@ -966,9 +966,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
@@ -1044,9 +1044,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
@@ -1117,9 +1117,9 @@ accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r, include=FALSE}
-nb_return = Naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_dataframe
-accuracy_nb = nb_return$metrics
+nb_return = naive_bayes(train_data, test_data)
+accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
+accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
