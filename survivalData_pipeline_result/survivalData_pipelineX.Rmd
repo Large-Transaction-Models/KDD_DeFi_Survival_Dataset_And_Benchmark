@@ -33,7 +33,7 @@ local({
 required_packages <- c(
   "rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
   "caret", "survival", "survminer", "ggplot2", 
-  "kableExtra", "rpart", "glmnet", "data.table", "reshape2", 
+  "kableExtra", "rpart", "glmnet", "data.table", "reshape2", "pROC", 
   "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "parallel"
 )
 

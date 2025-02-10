@@ -6,6 +6,7 @@ library(caret)
 library(e1071)
 library(parallel)
 library(xgboost)
+library(pROC)
 
 logistic_regression <- function(train_data, test_data) {
   # Ensure train_data and test_data are in data.table format for fast operations
