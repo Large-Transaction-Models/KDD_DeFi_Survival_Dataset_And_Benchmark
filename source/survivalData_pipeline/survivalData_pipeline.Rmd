@@ -68,7 +68,7 @@ group_by <- dplyr::group_by
   `combine_classification_results`, `accuracy_comparison_plot`, `get_percentage`, 
   `specific_accuracy_statistics`, `combine_accuracy_dataframes`
   
-  * Classification model: `logistic_regression`, `decision_tree`, `Naive_bayes`, `XG_Boost`, 
+  * Classification model: `logistic_regression`, `decision_tree`, `naive_bayes`, `XG_Boost`, 
   `elastic_net`
   
 
