@@ -31,8 +31,8 @@ calculate_model_metrics <- function(confusion_matrix, binary_predictions, model_
   
   # print out all the accuracy records
   print(paste(model_name, "model prediction accuracy:"))
-  cat("Class accuracy (Specificity):", sprintf("%.0f%%", class_accuracy * 100), "\n")
-  cat("Negative 1 accuracy (Sensitivity/Recall):", sprintf("%.0f%%", negative_1_accuracy * 100), "\n")
+  cat("Class accuracy:", sprintf("%.0f%%", class_accuracy * 100), "\n")
+  cat("Negative 1 accuracy:", sprintf("%.0f%%", negative_1_accuracy * 100), "\n")
   cat("Balanced accuracy:", sprintf("%.0f%%", balanced_accuracy * 100), "\n")
   cat("Overall accuracy:", sprintf("%.0f%%", overall_accuracy * 100), "\n")
   cat("Precision:", sprintf("%.0f%%", precision * 100), "\n")

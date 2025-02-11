@@ -69,7 +69,7 @@ group_by <- dplyr::group_by
   `specific_accuracy_statistics`, `combine_accuracy_dataframes`
   
   * Classification model: `logistic_regression`, `decision_tree`, `naive_bayes`, `XG_Boost`, 
-  `elastic_net`
+  `elastic_net`, `logistic_regression_op`, `decision_tree_op`, `naive_bayes_op`, `elastic_net_op`
   
 
 ## Data Preprocessing
@@ -254,8 +254,8 @@ calculate_model_metrics <- function(confusion_matrix, binary_predictions, model_
   
   # print out all the accuracy records
   print(paste(model_name, "model prediction accuracy:"))
-  cat("Class accuracy (Specificity):", sprintf("%.0f%%", class_accuracy * 100), "\n")
-  cat("Negative 1 accuracy (Sensitivity/Recall):", sprintf("%.0f%%", negative_1_accuracy * 100), "\n")
+  cat("Class accuracy:", sprintf("%.0f%%", class_accuracy * 100), "\n")
+  cat("Negative 1 accuracy:", sprintf("%.0f%%", negative_1_accuracy * 100), "\n")
   cat("Balanced accuracy:", sprintf("%.0f%%", balanced_accuracy * 100), "\n")
   cat("Overall accuracy:", sprintf("%.0f%%", overall_accuracy * 100), "\n")
   cat("Precision:", sprintf("%.0f%%", precision * 100), "\n")
@@ -461,21 +461,23 @@ combine_accuracy_dataframes <- function(df_list) {
 
 ### def logistic_regression
 
-This `logistic_regression` function implements a logistic regression model based on **Lasso regularization** for binary classification tasks. The model first preprocesses the data, including dividing `train_data` into 80% `train_set` and 20% `validation_set`, where the validation set is actively used for **hyperparameter tuning** rather than just evaluation. For numerical features, all datasets are standardized to have a **mean of 0** and a **standard deviation of 1**, improving model stability and optimization efficiency. In terms of feature transformation, `model.matrix` is used to generate a design matrix **without an intercept**, ensuring compatibility with the `glmnet` function. `glmnet` applies **logistic regression (`family = "binomial"`) with Lasso regularization (`alpha = 1`)**, which automatically selects the most important features while eliminating redundant ones, thereby enhancing the model's generalization ability. To determine the optimal regularization parameter **`lambda`**, the function first performs **cross-validation using `cv.glmnet`** to generate a range of candidate `lambda` values. Unlike traditional methods that directly select `lambda.min` from cross-validation, this implementation **evaluates multiple `lambda` values on the validation set** and selects the one that achieves the highest **AUC (Area Under the Curve) score**. This ensures that the chosen `lambda` not only minimizes training error but also performs optimally on unseen validation data, **preventing overfitting and improving generalization**. Once the best `lambda` is determined, it is applied to **predict on both `validation_set` and `test_data`**, where probabilities are converted into binary classification results based on a **0.5 threshold**. Finally, the function calculates performance metrics such as **accuracy, recall, and F1 score** using `calculate_model_metrics`, providing a comprehensive evaluation of model performance.
+This **logistic regression model** applies **Lasso regularization (L1 penalty)** for **binary classification** using the `glmnet` package. The model follows a structured workflow, starting with **data preprocessing**, where numeric features in the `train_set`, `validation_set`, and `test_data` are **standardized** (mean = 0, standard deviation = 1) to ensure stable optimization. The categorical variables are handled automatically by converting the dataset into **matrix format** using `model.matrix()`, which excludes the intercept and creates a design matrix suitable for `glmnet`. To **train the logistic regression model**, **Lasso regularization** (`alpha = 1`) is applied, which helps in **feature selection by shrinking less important coefficients to zero**, improving interpretability and reducing overfitting. The model first undergoes **cross-validation (`cv.glmnet()`)**, which automatically determines a range of `lambda` values (the regularization parameter) and selects the `lambda.min` that minimizes the cross-validation error. This approach helps **balance model complexity and generalization**, preventing overfitting while ensuring predictive performance. After selecting the **best lambda**, the model predicts **event probabilities** on both the `validation_set` and `test_data`, applying a **0.5 threshold** to classify instances as `"yes"` or `"no"`. Performance evaluation is conducted using **confusion matrices** and key classification metrics such as **accuracy, precision, recall, and F1-score**, computed through the `calculate_model_metrics()` function.
 
 ```{r}
 logistic_regression <- function(train_data, test_data) {
-  # Ensure train_data and test_data are in data.table format for fast operations
+  # library(glmnet)  # load glmnet package for logistic regression with regularization
+  # library(data.table)  # load data.table for efficient data handling
+  # ensure train_data and test_data are in the data.table format for fast operations
   setDT(train_data)
   setDT(test_data)
   
   # Split train_data into train_set (80%) and validation_set (20%)
-  set.seed(123)  # Ensure reproducibility
+  set.seed(123)  # ensure reproducibility
   trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
   train_set <- train_data[trainIndex, ]
   validation_set <- train_data[-trainIndex, ]
   
-  # Identify numeric features in the dataset and scale them
+  # Identify numeric features in the dataset, and scale them to have mean = 0 and standard deviation = 1
   numeric_features <- names(train_set)[sapply(train_set, is.numeric)]
   
   # Scale numeric columns in train set
@@ -485,32 +487,395 @@ logistic_regression <- function(train_data, test_data) {
   # Scale numeric columns in test set
   test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
   
-  # Convert datasets to matrix format as required by the glmnet package
+  # Convert the training, validation, and testing datasets to matrix format as required by the glmnet package
+  # model matrix function excludes the intercept (-1) and converts data for glmnet
   x_train <- model.matrix(event ~ . - 1, data = train_set)  
-  y_train <- train_set$event  
+  y_train <- train_set$event  # extract the target variable from the training data
   
   x_validation <- model.matrix(event ~ . - 1, data = validation_set)  
-  y_validation <- validation_set$event  # Extract target variable for validation set
-  
   x_test <- model.matrix(event ~ . - 1, data = test_data)  
   
   # Apply logistic regression with Lasso regularization (alpha = 1 means Lasso)
+  # 'family = binomial' specifies logistic regression for binary classification
+  logistic_regression_classifier <- glmnet(x_train, y_train, family = "binomial", alpha = 1)
+  
+  # Use validation set to select the best lambda value
+  lambda_values <- logistic_regression_classifier$lambda  # Get available lambda values
+  cv_model <- cv.glmnet(x_train, y_train, family = "binomial", alpha = 1)  # Cross-validation
+  best_lambda <- cv_model$lambda.min  # Select the best lambda based on cross-validation
+  
+  # Predict the probability of the event (outcome) on the validation set
+  predict_probabilities_val <- predict(logistic_regression_classifier, s = best_lambda, newx = x_validation, type = "response")
+  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  validation_conf_matrix <- table(Predicted = binary_prediction_val, Actual = validation_set$event)
+  
+  # Evaluate validation set performance
+  validation_metrics <- calculate_model_metrics(validation_conf_matrix, predict_probabilities_val, "Logistic Regression (Validation)")
+  
+  # Predict the probability of the event (outcome) on the test set using the best lambda
+  predict_probabilities_test <- predict(logistic_regression_classifier, s = best_lambda, newx = x_test, type = "response")
+  binary_prediction_test <- ifelse(predict_probabilities_test > 0.5, "yes", "no")
+  
+  # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
+  test_conf_matrix <- table(Predicted = binary_prediction_test, Actual = test_data$event)
+  
+  # Evaluate model performance by calculating metrics such as accuracy, precision, recall, etc.
+  metrics_lr <- calculate_model_metrics(test_conf_matrix, predict_probabilities_test, "Logistic Regression")
+  
+  # Create a dataframe with the desired structure
+  metrics_lr_dataframe = get_dataframe("Logistic Regression", metrics_lr)
+  return (list(metrics_lr_dataframe = metrics_lr_dataframe, metrics_lr = metrics_lr))
+}
+```
+
+### def decision_tree
+
+This **decision tree model** is designed for **binary classification**, using the `rpart` package to construct and optimize a tree-based classifier. The model starts with **data partitioning**, where the training data is split into **80% training set and 20% validation set** to allow hyperparameter tuning. The decision tree is then trained on the `train_set` using the **CART (Classification and Regression Trees) algorithm**, with the **"class"** method to handle categorical target variables.Key hyperparameters are set through `rpart.control()`, including: **`cp = 0.01`**: The complexity parameter, which controls **pruning** by preventing overly complex trees. **`maxdepth = 30`**: The maximum depth of the tree, balancing complexity and generalization. **`minsplit = 20`**: The minimum number of observations required to split a node, ensuring stability in decision-making. After training, the model **predicts on the validation set**, and its performance is evaluated using a **confusion matrix** and classification metrics (`calculate_model_metrics()`). The final decision tree is then applied to the **test dataset**, producing **predicted labels**, which are compared against actual outcomes to compute key performance metrics such as **accuracy, precision, recall, and F1-score**.
+
+```{r}
+decision_tree <- function(train_data, test_data) {
+  # library(rpart)
+  # library(caret) # Load caret for data partitioning
+  
+  # Split train_data into train_set (80%) and validation_set (20%)
+  # ensure reproducibility
+  set.seed(123)
+  trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
+  train_set <- train_data[trainIndex, ]
+  validation_set <- train_data[-trainIndex, ]
+  
+  # Train the decision tree model with hyperparameter tuning
+  decision_tree_classifier <- rpart(
+    event ~ .,
+    data = train_set,
+    method = "class",
+    control = rpart.control(
+      # Complexity parameter for pruning
+      cp = 0.01,
+      # Maximum depth of the tree
+      maxdepth = 30,
+      # Minimum number of observations needed to split a node
+      minsplit = 20
+    )
+  )
+  # Predict on the validation dataset
+  predict_probabilities_val <- predict(decision_tree_classifier, validation_set, type = "class")
+  validation_conf_matrix <- table(Predicted = predict_probabilities_val, Actual = validation_set$event)
+  
+  # Evaluate validation performance
+  validation_metrics <- calculate_model_metrics(validation_conf_matrix, predict_probabilities_val, 
+                                                "Decision Tree (Validation)")
+  
+  # Predict on the testing dataset
+  predict_probabilities_dt <- predict(decision_tree_classifier, test_data, type = "class")
+  test_conf_matrix <- table(Predicted = predict_probabilities_dt, Actual = test_data$event)
+  
+  # Evaluate model performance
+  metrics_dt <- calculate_model_metrics(test_conf_matrix, predict_probabilities_dt, "Decision Tree")
+  
+  # Create a dataframe with the desired structure
+  metrics_dt_dataframe = get_dataframe("Decision Tree", metrics_dt)
+  return (list(metrics_dt_dataframe = metrics_dt_dataframe, metrics_dt = metrics_dt))
+}
+```
+
+### def naive_bayes
+
+This **Naive Bayes model** is designed for **binary classification**, leveraging the `e1071` package to implement a probabilistic classifier based on **Bayes' theorem** with the assumption of **feature independence**. The model begins with **data preprocessing**, where the target variable `event` is explicitly converted into a **factor** to ensure compatibility with Naive Bayes. The dataset is then **split into an 80% training set and a 20% validation set**, allowing for hyperparameter tuning and performance evaluation. Feature matrices for **validation and test sets** are prepared by removing the target column to ensure that the model only relies on predictors for classification. During training, the **Naive Bayes classifier** is built using the `naiveBayes()` function, which computes **prior probabilities** for each class and estimates conditional probabilities for each feature. Predictions are then made on the **validation set**, with both **class labels** and **probability scores** being generated. The model's performance is evaluated using a **confusion matrix** and various classification metrics, including **accuracy, precision, recall, and F1-score**, calculated through the `calculate_model_metrics()` function.
+
+```{r}
+naive_bayes <- function(train_data, test_data) {
+  # library(e1071)
+  # library(caret) # Load caret for data partitioning
+  
+  target_column = "event"
+  
+  # Convert the target column to a factor if it's not already
+  train_data[[target_column]] <- as.factor(train_data[[target_column]])
+  test_labels <- as.factor(test_data[[target_column]])
+  
+  # Split train_data into train_set (80%) and validation_set (20%)
+  # ensure reproducibility
+  set.seed(123)
+  trainIndex <- createDataPartition(train_data[[target_column]], p = 0.8, list = FALSE)
+  train_set <- train_data[trainIndex, ]
+  validation_set <- train_data[-trainIndex, ]
+  
+  # Remove the target column from the validation and test sets for prediction
+  validation_features <- validation_set %>% select(-all_of(target_column))
+  test_features <- test_data %>% select(-all_of(target_column))
+  
+  # Train Naive Bayes model on train_set
+  nb_model <- naiveBayes(as.formula(paste(target_column, "~ .")), data = train_set)
+  
+  # Make predictions on the validation set
+  validation_predictions <- predict(nb_model, validation_features)
+  
+  # Get prediction probabilities for validation set
+  validation_probabilities <- predict(nb_model, validation_features, type = "raw")
+  
+  # Evaluate model performance with a confusion matrix for validation set
+  validation_conf_matrix <- table(Predicted = validation_predictions, Actual = validation_set[[target_column]])
+  validation_metrics <- calculate_model_metrics(validation_conf_matrix, validation_probabilities, 
+                                                "Naive Bayes (Validation)")
+  
+  # Make predictions on the test set
+  predictions <- predict(nb_model, test_features)
+  
+  # Get prediction probabilities for test set
+  prediction_probabilities <- predict(nb_model, test_features, type = "raw")
+  
+  # Ensure both predicted and actual labels are factors with the same levels
+  predictions <- factor(predictions, levels = levels(test_labels))
+  
+  # Evaluate model performance with a confusion matrix for test set
+  conf_matrix <- table(Predicted = predictions, Actual = test_labels)
+  
+  metrics_nb <- calculate_model_metrics(conf_matrix, prediction_probabilities, "Naive Bayes")
+  
+  # Create a dataframe with the desired structure
+  metrics_nb_dataframe = get_dataframe("Naive Bayes", metrics_nb)
+  
+  # Each classification model needs to return these two variables
+  return (list(metrics_nb_dataframe = metrics_nb_dataframe, metrics_nb = metrics_nb))
+}
+```
+
+### def XG_Boost
+
+This **XGBoost model** is a powerful gradient boosting framework designed for **binary classification**, leveraging **parallel computation** and **tree-based learning** to achieve high predictive performance. The model starts with **data preprocessing**, where numeric features in the training, validation, and test sets are **standardized** to ensure stable optimization. The target variable is converted into **binary labels (0/1)** to align with the **logistic objective function** used in XGBoost. The dataset is then transformed into **DMatrix format**, a highly optimized data structure that accelerates computation and improves memory efficiency. The model employs **hyperparameters** such as `max_depth = 6`, `eta = 0.1`, `subsample = 0.8`, and `colsample_bytree = 0.8` to **balance complexity and generalization**. A **learning rate (`eta`)** of 0.1 is chosen to ensure stable convergence, while `max_depth` controls the depth of each decision tree, preventing overfitting. Additionally, `subsample` and `colsample_bytree` introduce **randomness in data selection**, enhancing model robustness. The model is trained using **200 boosting rounds**, with **early stopping** (`early_stopping_rounds = 10`) applied to prevent unnecessary computation when performance no longer improves on the validation set. After training, the model **predicts event probabilities** on both the validation and test sets. Predictions are converted into binary class labels using a **0.5 probability threshold**, and classification performance is assessed using **confusion matrices** and key evaluation metrics such as **accuracy, precision, recall, and F1-score** through `calculate_model_metrics()`.
+
+```{r}
+XG_Boost <- function(train_data, test_data) {
+  # Convert train_data and test_data to data.table format
+  setDT(train_data)
+  setDT(test_data)
+  
+  # Split train_data into train_set (80%) and validation_set (20%)
+  # ensure reproducibility
+  set.seed(123)
+  trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
+  train_set <- train_data[trainIndex, ]
+  validation_set <- train_data[-trainIndex, ]
+  
+  # Identify numeric features and scale them
+  numeric_features <- names(train_set)[sapply(train_set, is.numeric)]
+  train_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  validation_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  
+  # Convert data to matrix format required by XGBoost
+  x_train <- model.matrix(event ~ . - 1, data = train_set)
+  # Convert event labels to 0/1
+  y_train <- as.numeric(train_set$event == "yes")
+  x_validation <- model.matrix(event ~ . - 1, data = validation_set)
+  y_validation <- as.numeric(validation_set$event == "yes")
+  x_test <- model.matrix(event ~ . - 1, data = test_data)
+  
+  # Convert to DMatrix format, which is optimized for XGBoost
+  dtrain <- xgb.DMatrix(data = x_train, label = y_train)
+  dvalidation <- xgb.DMatrix(data = x_validation, label = y_validation)
+  dtest <- xgb.DMatrix(data = x_test)
+  
+  # Detect available CPU cores for parallel computation
+  num_cores <- detectCores()
+  
+  # Define XGBoost hyperparameters
+  params <- list(
+    objective = "binary:logistic",
+    eval_metric = "logloss",
+    max_depth = 6,
+    eta = 0.1,
+    subsample = 0.8,
+    colsample_bytree = 0.8,
+    nthread = num_cores
+  )
+  
+  # Train XGBoost model with early stopping using validation set
+  xgb_model <- xgb.train(params = params,
+                         data = dtrain,
+                         nrounds = 200,
+                         early_stopping_rounds = 10,
+                         watchlist = list(train = dtrain, validation = dvalidation),
+                         verbose = 0)
+  
+  # Predict probabilities on the validation dataset
+  predict_probabilities_val <- predict(xgb_model, dvalidation)
+  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  validation_conf_matrix <- table(factor(binary_prediction_val, levels = c("yes", "no")),
+                                  factor(validation_set$event, levels = c("yes", "no")))
+  
+  # Evaluate validation set performance
+  validation_metrics <- calculate_model_metrics(validation_conf_matrix, predict_probabilities_val, 
+                                                "XGBoost (Validation)")
+  
+  # Predict probabilities on the test dataset
+  predict_probabilities_xgb <- predict(xgb_model, dtest)
+  # Convert predicted probabilities into binary class labels (yes/no) using a threshold of 0.5
+  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > 0.5, "yes", "no")
+  
+  # Ensure both predicted and actual labels are factors with the same levels
+  binary_prediction_xgb <- factor(binary_prediction_xgb, levels = c("yes", "no"))
+  test_data$event <- factor(test_data$event, levels = c("yes", "no"))
+  
+  # Ensure confusion matrix includes all levels
+  confusion_matrix_xgb <- table(factor(binary_prediction_xgb, levels = c("yes", "no")), 
+                                factor(test_data$event, levels = c("yes", "no")))
+  
+  # Ensure matrix is complete to avoid subscript out of bounds error
+  if (!all(c("yes", "no") %in% rownames(confusion_matrix_xgb))) {
+    confusion_matrix_xgb <- matrix(0, nrow = 2, ncol = 2, dimnames = list(c("yes", "no"), c("yes", "no")))
+  }
+  
+  # Evaluate model performance using accuracy, precision, recall, and F1-score
+  metrics_xgb <- calculate_model_metrics(confusion_matrix_xgb, predict_probabilities_xgb, "XGBoost")
+  
+  # Store the calculated metrics in a structured dataframe for easy comparison
+  metrics_xgb_dataframe <- get_dataframe("XGBoost", metrics_xgb)
+  
+  # Return both the detailed metrics list and the formatted dataframe
+  return (list(metrics_xgb_dataframe = metrics_xgb_dataframe, metrics_xgb = metrics_xgb))
+}
+```
+
+### def elastic_net
+
+This **Elastic Net model** is a **regularized logistic regression classifier** that combines **Lasso (L1) and Ridge (L2) penalties**, offering a balance between **feature selection** and **coefficient shrinkage**. The model starts with **data preprocessing**, where numeric features are standardized to ensure stable optimization, and categorical features are transformed into a matrix format using `model.matrix()`, making them compatible with `glmnet`. The dataset is then split into **80% training set and 20% validation set**, allowing for hyperparameter tuning to find the optimal regularization strength. Elastic Net is trained with an **alpha value of 0.5**, meaning it applies **equal weight to both L1 and L2 regularization**, ensuring that it not only selects important features (like Lasso) but also maintains **feature correlations** (like Ridge). The model then undergoes **cross-validation (`cv.glmnet()`)**, which evaluates multiple values of `lambda`, the regularization parameter. The **best lambda (`lambda.min`)** is selected based on the lowest cross-validation error, ensuring an optimal trade-off between **bias and variance**. Once the **best lambda** is determined, the model makes **probabilistic predictions** on both the validation and test sets. These probabilities are **converted into binary classifications** using a **0.5 decision threshold**, and performance is assessed using a **confusion matrix and key classification metrics**, such as **accuracy, precision, recall, and F1-score**, calculated through `calculate_model_metrics()`.
+
+```{r}
+elastic_net <- function(train_data, test_data) {
+  # Load required libraries
+  # library(glmnet) # Required for Elastic Net (Lasso + Ridge regularization)
+  # library(data.table) # For efficient data handling using data.table
+  
+  # Convert train_data and test_data to data.table format for optimized processing
+  setDT(train_data)
+  setDT(test_data)
+  
+  # Split train_data into train_set (80%) and validation_set (20%)
+  # ensure reproducibility
+  set.seed(123)
+  trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
+  train_set <- train_data[trainIndex, ]
+  validation_set <- train_data[-trainIndex, ]
+  
+  # Identify numeric features in the dataset for standardization
+  numeric_features <- names(train_set)[sapply(train_set, is.numeric)]
+  
+  # Standardize numeric columns (mean = 0, standard deviation = 1) to improve model performance
+  train_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  validation_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  
+  # Convert the dataset into a matrix format, as required by glmnet
+  # Feature matrix for training
+  x_train <- model.matrix(event ~ . - 1, data = train_set)
+  # Target variable
+  y_train <- train_set$event
+  # Feature matrix for validation
+  x_validation <- model.matrix(event ~ . - 1, data = validation_set)
+  # Feature matrix for testing
+  x_test <- model.matrix(event ~ . - 1, data = test_data)
+  
+  # Train the Elastic Net model with a combination of Lasso (L1) and Ridge (L2) regularization
+  # alpha = 0.5 sets an equal mix of Lasso and Ridge penalties
+  elastic_net_model <- glmnet(x_train, y_train, family = "binomial", alpha = 0.5)
+  
+  # Use cross-validation to determine the best lambda value
+  cv_model <- cv.glmnet(x_train, y_train, family = "binomial", alpha = 0.5)
+  best_lambda <- cv_model$lambda.min
+  
+  # Predict event probabilities for the validation dataset
+  predict_probabilities_val <- predict(elastic_net_model, s = best_lambda, newx = x_validation, type = "response")
+  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  validation_conf_matrix <- table(Predicted = binary_prediction_val, Actual = validation_set$event)
+  
+  # Evaluate validation performance
+  validation_metrics <- calculate_model_metrics(validation_conf_matrix, predict_probabilities_val, 
+                                                "Elastic Net (Validation)")
+  
+  # Predict event probabilities for the test dataset using the best lambda
+  predict_probabilities_en <- predict(elastic_net_model, s = best_lambda, newx = x_test, type = "response")
+  binary_prediction_en <- ifelse(predict_probabilities_en > 0.5, "yes", "no")
+  
+  # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
+  confusion_matrix_en <- table(Predicted = binary_prediction_en, Actual = test_data$event)
+  
+  # Evaluate model performance using key classification metrics (accuracy, precision, recall, F1-score)
+  metrics_en <- calculate_model_metrics(confusion_matrix_en, predict_probabilities_en, "Elastic Net")
+  
+  # Store the calculated metrics in a structured dataframe for easy comparison
+  metrics_en_dataframe <- get_dataframe("Elastic Net", metrics_en)
+  
+  # Return both the detailed metrics list and the formatted dataframe
+  return (list(metrics_en_dataframe = metrics_en_dataframe, metrics_en = metrics_en))
+}
+```
+
+### def logistic_regression_op
+
+This **logistic regression model** implements **Lasso regularization (L1 penalty)** to enhance feature selection and prevent overfitting in binary classification tasks. The process begins with **data preprocessing**, where numeric features in the training, validation, and test sets are **standardized** (mean = 0, standard deviation = 1) to improve optimization stability. The data is then converted into **matrix format** using `model.matrix()`, ensuring compatibility with the `glmnet` package. To determine the **optimal regularization parameter (`lambda`)**, the model first **performs cross-validation (`cv.glmnet()`)** on the training set, generating a range of candidate `lambda` values. These values are then evaluated using the **validation set**, where for each `lambda`, the model predicts event probabilities and computes the **AUC (Area Under the Curve)**. The `lambda` yielding the highest **AUC** is selected as the best parameter, ensuring that the model maximizes predictive performance. Once the **best lambda** is determined, the model is retrained on the full training set with this optimal parameter. Predictions are made on both the **validation and test sets**, with event probabilities converted into **binary classifications** using a **0.5 threshold**. Model performance is assessed through **confusion matrices** and various classification metrics, such as **accuracy, precision, recall, and F1-score**, calculated via `calculate_model_metrics()`.
+
+```{r}
+logistic_regression_op <- function(train_data, test_data) {
+  # Load required libraries
+  # library(glmnet) # Logistic regression with regularization
+  # library(data.table) # Efficient data handling
+  # library(pROC) # Compute AUC for validation
+  
+  # Convert train_data and test_data to data.table format
+  setDT(train_data)
+  setDT(test_data)
+  
+  # Split train_data into train_set (80%) and validation_set (20%)
+  # Ensure reproducibility
+  set.seed(123)
+  trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
+  train_set <- train_data[trainIndex, ]
+  validation_set <- train_data[-trainIndex, ]
+  
+  # Identify numeric features and scale them
+  numeric_features <- names(train_set)[sapply(train_set, is.numeric)]
+  
+  # Standardize numeric features
+  train_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  validation_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
+  
+  # Convert datasets to matrix format as required by glmnet
+  x_train <- model.matrix(event ~ . - 1, data = train_set)
+  # Convert event labels to 0/1
+  y_train <- as.numeric(train_set$event == "yes")
+  
+  x_validation <- model.matrix(event ~ . - 1, data = validation_set)
+  # Convert event labels to 0/1
+  y_validation <- as.numeric(validation_set$event == "yes")
+  
+  x_test <- model.matrix(event ~ . - 1, data = test_data)
+  
+  # Apply logistic regression with Lasso regularization (alpha = 1)
   logistic_regression_classifier <- glmnet(x_train, y_train, family = "binomial", alpha = 1)
   
   # Perform cross-validation to get a range of lambda values
   cv_model <- cv.glmnet(x_train, y_train, family = "binomial", alpha = 1)
-  # Retrieve all lambda values from cross-validation
+  # Extract lambda values from cross-validation
   lambda_candidates <- cv_model$lambda
   
-  # Use validation set to select the best lambda based on AUC score
+  # Select best lambda based on AUC from validation set
   best_lambda <- NULL
-  best_auc <- -Inf  # Initialize the best AUC score
+  # Initialize best AUC score
+  best_auc <- -Inf
   
   for (lambda in lambda_candidates) {
-    predict_probabilities_val <- predict(cv_model$glmnet.fit, s = lambda, newx = x_validation, type = "response")
+    # Predict probabilities on validation set
+    predict_probabilities_val <- predict(logistic_regression_classifier, s = lambda, newx = x_validation, 
+                                         type = "response")
+    # Convert matrix to numeric vector
+    predict_probabilities_val <- as.vector(predict_probabilities_val)
     
     # Compute AUC for validation set
-    auc_val <- auc(roc(y_validation, predict_probabilities_val))
+    roc_obj <- roc(y_validation, predict_probabilities_val)
+    auc_val <- auc(roc_obj)
     
     # Update best lambda if current AUC is better
     if (auc_val > best_auc) {
@@ -519,9 +884,12 @@ logistic_regression <- function(train_data, test_data) {
     }
   }
   
-  # Predict on the validation set using the selected best lambda
-  predict_probabilities_val <- predict(logistic_regression_classifier, s = best_lambda, newx = x_validation, 
-                                       type = "response")
+  # Train final model with the best lambda
+  final_model <- glmnet(x_train, y_train, family = "binomial", alpha = 1, lambda = best_lambda)
+  
+  # Predict on validation dataset using the best lambda
+  predict_probabilities_val <- predict(final_model, newx = x_validation, type = "response")
+  predict_probabilities_val <- as.vector(predict_probabilities_val)
   binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
   validation_conf_matrix <- table(Predicted = binary_prediction_val, Actual = validation_set$event)
   
@@ -529,44 +897,47 @@ logistic_regression <- function(train_data, test_data) {
   validation_metrics <- calculate_model_metrics(validation_conf_matrix, predict_probabilities_val, 
                                                 "Logistic Regression (Validation)")
   
-  # Predict on the test set using the best lambda
-  predict_probabilities_test <- predict(logistic_regression_classifier, s = best_lambda, newx = x_test, 
-                                        type = "response")
+  # Predict on test dataset using the best lambda
+  predict_probabilities_test <- predict(final_model, newx = x_test, type = "response")
+  predict_probabilities_test <- as.vector(predict_probabilities_test)
   binary_prediction_test <- ifelse(predict_probabilities_test > 0.5, "yes", "no")
   
-  # Create a confusion matrix for the test set
+  # Create confusion matrix for the test set
   test_conf_matrix <- table(Predicted = binary_prediction_test, Actual = test_data$event)
   
   # Evaluate model performance on the test set
   metrics_lr <- calculate_model_metrics(test_conf_matrix, predict_probabilities_test, "Logistic Regression")
   
-  # Create a dataframe with the desired structure
-  metrics_lr_dataframe = get_dataframe("Logistic Regression", metrics_lr)
+  # Store calculated metrics in a structured dataframe
+  metrics_lr_dataframe <- get_dataframe("Logistic Regression", metrics_lr)
   
   return (list(metrics_lr_dataframe = metrics_lr_dataframe, metrics_lr = metrics_lr))
 }
 ```
 
-### def decision_tree
+### def decision_tree_op
 
-This **decision tree model** is optimized to ensure that **hyperparameter selection is driven by validation data**, rather than relying on fixed values. The model first preprocesses the data by splitting `train_data` into **80% `train_set` and 20% `validation_set`**, ensuring that validation data plays an active role in hyperparameter tuning. The model is trained using **recursive partitioning (`rpart`)**, where it learns decision rules to classify observations based on feature splits. Instead of using a fixed complexity parameter (`cp`), which controls pruning and prevents overfitting, the model **evaluates multiple `cp` values** ranging from **0.0001 to 0.05**. For each candidate `cp`, a **decision tree is trained on `train_set`**, and its performance is assessed on `validation_set` using the **AUC (Area Under the Curve) score**. The `cp` value that achieves the highest **AUC on the validation set** is selected as the final hyperparameter. This approach prevents **underfitting (if `cp` is too large, resulting in an overly simple tree)** and **overfitting (if `cp` is too small, allowing excessive complexity)**. Once the best `cp` is determined, the final decision tree is trained using this parameter and applied to the **test dataset**, where its classification performance is evaluated using accuracy, recall, and F1 score.
+This **Decision Tree model** is a classification algorithm designed to iteratively split the data based on feature values, forming a tree-like structure for decision-making. The process begins with **data partitioning**, where the dataset is split into **80% training set and 20% validation set**, ensuring a separate dataset for hyperparameter tuning. The model undergoes **hyperparameter optimization** by selecting the best **complexity parameter (cp)**, which controls **pruning** and helps prevent overfitting. A range of `cp` values is tested, and for each candidate value, a **decision tree is trained on the training set**, followed by **prediction on the validation set**. The model's **AUC (Area Under the Curve)** is computed for each `cp` value, and the one that **yields the highest AUC** is selected as the **optimal pruning parameter**. Once the **best `cp`** is determined, the final **decision tree** is trained using this optimal parameter and is applied to both the **validation and test sets**. Predictions are generated, and classification performance is evaluated using a **confusion matrix and key metrics** such as **accuracy, precision, recall, and F1-score**, computed through `calculate_model_metrics()`.
 
 ```{r}
-decision_tree <- function(train_data, test_data) {
+decision_tree_op <- function(train_data, test_data) {
   # Load required libraries
   # library(rpart)
   # library(caret) # Load caret for data partitioning
   
   # Split train_data into train_set (80%) and validation_set (20%)
-  set.seed(123) # Ensure reproducibility
+  # Ensure reproducibility
+  set.seed(123)
   trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
   train_set <- train_data[trainIndex, ]
   validation_set <- train_data[-trainIndex, ]
   
   # Define candidate complexity parameters (cp) for pruning
-  cp_candidates <- seq(0.0001, 0.05, by = 0.002)  # Range of possible cp values
+  # Range of possible cp values
+  cp_candidates <- seq(0.0001, 0.05, by = 0.002)
   best_cp <- NULL
-  best_auc <- -Inf  # Initialize the best AUC score
+  # Initialize the best AUC score
+  best_auc <- -Inf
   
   # Loop over different cp values to find the best one using the validation set
   for (cp in cp_candidates) {
@@ -630,12 +1001,12 @@ decision_tree <- function(train_data, test_data) {
 }
 ```
 
-### def naive_bayes
+### def naive_bayes_op
 
-This optimized **Naive Bayes model** enhances the traditional approach by incorporating **validation-driven hyperparameter selection**, ensuring better generalization to unseen data. Initially, the dataset is split into **80% training (`train_set`) and 20% validation (`validation_set`)**, allowing the validation set to actively influence hyperparameter tuning. Instead of using a fixed **Laplace smoothing parameter (`laplace`)**, which prevents zero-probability issues in categorical features, the model evaluates multiple `laplace` values **ranging from 0 to 1**. For each candidate `laplace`, a **Naïve Bayes model** is trained on `train_set`, and its performance is measured on `validation_set` using the **AUC (Area Under the Curve) score**. The `laplace` value that maximizes AUC is selected as the optimal parameter, ensuring that the model balances between **avoiding overfitting (when `laplace` is too low) and excessive smoothing (when `laplace` is too high)**. Once the best `laplace` is determined, the final Naïve Bayes model is retrained using this value and applied to **test data** for final evaluation. The model’s performance is assessed using key classification metrics, including **accuracy, recall, and F1 score**.
+This **Naïve Bayes model** is a probabilistic classifier based on **Bayes’ theorem**, assuming **feature independence** and leveraging **Laplace smoothing** to enhance performance. The model begins with **data preprocessing**, where the target variable is converted into a **factor**, ensuring compatibility with the `naiveBayes()` function. The dataset is then split into **80% training set and 20% validation set**, allowing for hyperparameter tuning. To optimize classification performance, the model tests multiple **Laplace smoothing values** ranging from 0 to 1, which help handle cases where certain feature-class combinations do not appear in the training data. For each candidate Laplace value, a **Naïve Bayes classifier** is trained and evaluated on the validation set, with **AUC (Area Under the Curve)** computed as the selection criterion. The Laplace value that yields the **highest AUC** is chosen as the optimal parameter, ensuring robust probability estimation. Once the best Laplace parameter is determined, the final **Naïve Bayes model** is trained on the full training set and applied to **both the validation and test datasets**. Predictions are made in **both categorical and probabilistic forms**, with **probabilities for the positive class ("yes")** used to evaluate model performance. The results are assessed using a **confusion matrix and classification metrics**, including **accuracy, precision, recall, and F1-score**, computed through `calculate_model_metrics()`.
 
 ```{r}
-naive_bayes <- function(train_data, test_data) {
+naive_bayes_op <- function(train_data, test_data) {
   # Load required libraries
   # library(e1071)
   # library(caret) # Load caret for data partitioning
@@ -647,7 +1018,8 @@ naive_bayes <- function(train_data, test_data) {
   test_labels <- as.factor(test_data[[target_column]])
   
   # Split train_data into train_set (80%) and validation_set (20%)
-  set.seed(123)  # Ensure reproducibility
+  # Ensure reproducibility
+  set.seed(123)
   trainIndex <- createDataPartition(train_data[[target_column]], p = 0.8, list = FALSE)
   train_set <- train_data[trainIndex, ]
   validation_set <- train_data[-trainIndex, ]
@@ -657,9 +1029,11 @@ naive_bayes <- function(train_data, test_data) {
   test_features <- test_data %>% select(-all_of(target_column))
   
   # Define candidate Laplace smoothing values
-  laplace_candidates <- seq(0, 1, by = 0.1)  # Range of laplace values to test
+  # Range of laplace values to test
+  laplace_candidates <- seq(0, 1, by = 0.1)
   best_laplace <- NULL
-  best_auc <- -Inf  # Initialize the best AUC score
+  # Initialize the best AUC score
+  best_auc <- -Inf
   
   # Hyperparameter tuning: Find the best laplace value using validation set
   for (laplace in laplace_candidates) {
@@ -716,22 +1090,24 @@ naive_bayes <- function(train_data, test_data) {
 }
 ```
 
-### def elastic_net
+### def elastic_net_op
 
-This optimized **Elastic Net model** enhances traditional logistic regression by incorporating both **Lasso (L1) and Ridge (L2) regularization**, allowing for automatic feature selection while mitigating multicollinearity. The model first preprocesses the data by standardizing numerical features to have **a mean of 0 and a standard deviation of 1**, ensuring stable convergence. Instead of using a fixed **`alpha`** (which controls the balance between L1 and L2 penalties) and relying solely on **cross-validation for `lambda` selection**, this implementation iterates over multiple **`alpha` values (ranging from 0 to 1)**. For each **`alpha`**, a **cross-validated `glmnet` model** is trained to determine the best **`lambda`**, and its performance is evaluated on the **validation set using the AUC (Area Under the Curve) score**. The combination of **`alpha` and `lambda` that yields the highest AUC** is selected as the final hyperparameter set. The optimized **Elastic Net model** is then retrained using the best `alpha` and `lambda` values and applied to **test data**, where its performance is assessed using standard classification metrics such as **accuracy, precision, recall, and F1-score**.
+This **Elastic Net model** is an advanced **regularized logistic regression classifier** that combines both **Lasso (L1) and Ridge (L2) penalties**, optimizing for **feature selection and coefficient stability**. The model begins with **data preprocessing**, where numeric features are standardized for improved optimization, and categorical features are transformed into a matrix format using `model.matrix()` to ensure compatibility with `glmnet`. The dataset is split into **80% training and 20% validation**, allowing for hyperparameter tuning. Unlike standard models that rely on a predefined **alpha** value, this implementation systematically searches for the **best combination of alpha (L1-L2 mixing parameter) and lambda (regularization strength)** using the validation set. The model iterates through **alpha values ranging from 0 to 1**, with each step performing **cross-validation (`cv.glmnet()`)** to find the corresponding **optimal lambda**. The combination that achieves the **highest AUC (Area Under the Curve) score** on the validation set is selected as the best set of parameters. After determining the optimal hyperparameters, the final model is retrained on the full training set and used to **predict probabilities for both the validation and test sets**. Predictions are thresholded at **0.5** to produce binary classifications, which are evaluated using a **confusion matrix and key classification metrics** such as **accuracy, precision, recall, and F1-score** via `calculate_model_metrics()`.
 
 ```{r}
-elastic_net <- function(train_data, test_data) {
+elastic_net_op <- function(train_data, test_data) {
   # Load required libraries
   # library(glmnet) # Required for Elastic Net (Lasso + Ridge regularization)
   # library(data.table) # For efficient data handling using data.table
+  # library(pROC) # Compute AUC for validation
   
   # Convert train_data and test_data to data.table format for optimized processing
   setDT(train_data)
   setDT(test_data)
   
   # Split train_data into train_set (80%) and validation_set (20%)
-  set.seed(123)  # Ensure reproducibility
+  # Ensure reproducibility
+  set.seed(123)
   trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
   train_set <- train_data[trainIndex, ]
   validation_set <- train_data[-trainIndex, ]
@@ -745,22 +1121,20 @@ elastic_net <- function(train_data, test_data) {
   test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
   
   # Convert the dataset into a matrix format, as required by glmnet
-  # Feature matrix for training
   x_train <- model.matrix(event ~ . - 1, data = train_set)
-  # Target variable
-  y_train <- train_set$event
-  # Feature matrix for validation
+  # Convert event labels to 0/1
+  y_train <- as.numeric(train_set$event == "yes")
   x_validation <- model.matrix(event ~ . - 1, data = validation_set)
-  y_validation <- validation_set$event
-  # Feature matrix for testing
+  # Convert event labels to 0/1
+  y_validation <- as.numeric(validation_set$event == "yes")
   x_test <- model.matrix(event ~ . - 1, data = test_data)
   
   # Define candidate alpha values for Elastic Net optimization
-  # Range from 0 (Ridge) to 1 (Lasso)
-  alpha_candidates <- seq(0, 1, by = 0.1)
+  alpha_candidates <- seq(0, 1, by = 0.1)  # Range from 0 (Ridge) to 1 (Lasso)
   best_alpha <- NULL
   best_lambda <- NULL
-  best_auc <- -Inf  # Initialize best AUC score
+  # Initialize best AUC score
+  best_auc <- -Inf
   
   # Iterate through different alpha values to find the best one using validation set
   for (alpha in alpha_candidates) {
@@ -772,9 +1146,12 @@ elastic_net <- function(train_data, test_data) {
     # Predict on validation set
     predict_probabilities_val <- predict(cv_model$glmnet.fit, s = lambda_min, newx = x_validation, 
                                          type = "response")
+    # Convert matrix to numeric vector
+    predict_probabilities_val <- as.vector(predict_probabilities_val)
     
     # Compute AUC for validation set
-    auc_val <- auc(roc(y_validation, predict_probabilities_val))
+    roc_obj <- roc(y_validation, predict_probabilities_val)
+    auc_val <- auc(roc_obj)
     
     # Update best alpha and lambda if current AUC is higher
     if (auc_val > best_auc) {
@@ -789,6 +1166,8 @@ elastic_net <- function(train_data, test_data) {
   
   # Predict on the validation dataset using the selected best parameters
   predict_probabilities_val <- predict(elastic_net_model, newx = x_validation, type = "response")
+  # Convert matrix to numeric vector
+  predict_probabilities_val <- as.vector(predict_probabilities_val)
   binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
   validation_conf_matrix <- table(Predicted = binary_prediction_val, Actual = validation_set$event)
   
@@ -798,6 +1177,8 @@ elastic_net <- function(train_data, test_data) {
   
   # Predict event probabilities for the test dataset using the best parameters
   predict_probabilities_en <- predict(elastic_net_model, newx = x_test, type = "response")
+  # Convert matrix to numeric vector
+  predict_probabilities_en <- as.vector(predict_probabilities_en)
   binary_prediction_en <- ifelse(predict_probabilities_en > 0.5, "yes", "no")
   
   # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
@@ -811,118 +1192,5 @@ elastic_net <- function(train_data, test_data) {
   
   # Return both the detailed metrics list and the formatted dataframe
   return (list(metrics_en_dataframe = metrics_en_dataframe, metrics_en = metrics_en))
-}
-```
-
-### def XG_Boost
-
-This optimized **XGBoost model** significantly improves efficiency while maintaining high predictive performance by incorporating **random search, cross-validation, parallel computation, and early stopping**. The model begins by **preprocessing the data**, including **standardizing numerical features** and converting categorical variables into a **matrix format compatible with XGBoost**. Unlike traditional **grid search**, which exhaustively tests all hyperparameter combinations, this implementation employs **random search**, selecting only **five hyperparameter sets** from a predefined range. Instead of relying solely on a **validation set** for hyperparameter tuning, it utilizes **`xgb.cv()` with 5-fold cross-validation**, ensuring a **more robust and stable** hyperparameter selection process. The **best combination of `max_depth`, `eta`, `subsample`, and `colsample_bytree`** is determined based on the highest **AUC score** from cross-validation. Additionally, the function enables **parallel processing** by automatically detecting and utilizing all available CPU cores, significantly reducing training time. To further optimize performance and prevent overfitting, **early stopping** is applied, halting training if no improvement is observed after **10 consecutive rounds**. Once the best parameters are identified, the final **XGBoost model** is trained and evaluated on the **test dataset**, where key classification metrics such as **accuracy, recall, precision, and F1-score** are computed.
-
-```{r}
-XG_Boost <- function(train_data, test_data) {
-  # Convert train_data and test_data to data.table format
-  setDT(train_data)
-  setDT(test_data)
-  
-  # Split train_data into train_set (80%) and validation_set (20%)
-  set.seed(123)  # Ensure reproducibility
-  trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
-  train_set <- train_data[trainIndex, ]
-  validation_set <- train_data[-trainIndex, ]
-  
-  # Identify numeric features and scale them
-  numeric_features <- names(train_set)[sapply(train_set, is.numeric)]
-  train_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
-  validation_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
-  test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
-  
-  # Convert data to matrix format required by XGBoost
-  x_train <- model.matrix(event ~ . - 1, data = train_set)
-  y_train <- as.numeric(train_set$event == "yes")  # Convert event labels to 0/1
-  x_validation <- model.matrix(event ~ . - 1, data = validation_set)
-  y_validation <- as.numeric(validation_set$event == "yes")
-  x_test <- model.matrix(event ~ . - 1, data = test_data)
-  
-  # Convert to DMatrix format, which is optimized for XGBoost
-  dtrain <- xgb.DMatrix(data = x_train, label = y_train)
-  dvalidation <- xgb.DMatrix(data = x_validation, label = y_validation)
-  dtest <- xgb.DMatrix(data = x_test)
-  
-  # Detect available CPU cores for parallel computation
-  num_cores <- detectCores()
-  
-  # Define a small set of candidate hyperparameters for random search
-  param_grid <- expand.grid(
-    max_depth = c(4, 6),  
-    eta = c(0.05, 0.1),  
-    subsample = c(0.8),   
-    colsample_bytree = c(0.8)
-  ) %>% sample_n(5)  # Randomly sample 5 hyperparameter sets
-  
-  best_params <- NULL
-  best_auc <- -Inf  # Initialize best AUC score
-  
-  # Hyperparameter tuning using cross-validation
-  for (i in 1:nrow(param_grid)) {
-    params <- list(
-      objective = "binary:logistic",
-      eval_metric = "auc",
-      max_depth = param_grid$max_depth[i],
-      eta = param_grid$eta[i],
-      subsample = param_grid$subsample[i],
-      colsample_bytree = param_grid$colsample_bytree[i],
-      nthread = num_cores
-    )
-    
-    # Perform cross-validation
-    cv_model <- xgb.cv(
-      params = params,
-      data = dtrain,
-      nrounds = 200,
-      nfold = 5,  # 5-Fold Cross-Validation
-      early_stopping_rounds = 10,
-      metrics = "auc",
-      verbose = 0
-    )
-    
-    # Get best AUC from CV
-    best_cv_auc <- max(cv_model$evaluation_log$test_auc_mean)
-    
-    # Update best parameters if AUC improves
-    if (best_cv_auc > best_auc) {
-      best_auc <- best_cv_auc
-      best_params <- params
-    }
-  }
-  
-  # Train final model with the best hyperparameters
-  xgb_model <- xgb.train(
-    params = best_params,
-    data = dtrain,
-    nrounds = 200,
-    early_stopping_rounds = 10,
-    watchlist = list(train = dtrain, validation = dvalidation),
-    verbose = 0
-  )
-  
-  # Predict on test set
-  predict_probabilities_xgb <- predict(xgb_model, dtest)
-  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > 0.5, "yes", "no")
-  
-  # Ensure both predicted and actual labels are factors with the same levels
-  binary_prediction_xgb <- factor(binary_prediction_xgb, levels = c("yes", "no"))
-  test_data$event <- factor(test_data$event, levels = c("yes", "no"))
-  
-  # Generate confusion matrix
-  confusion_matrix_xgb <- table(binary_prediction_xgb, test_data$event)
-  
-  # Evaluate model performance
-  metrics_xgb <- calculate_model_metrics(confusion_matrix_xgb, predict_probabilities_xgb, "XGBoost")
-  
-  # Store metrics in a structured dataframe
-  metrics_xgb_dataframe <- get_dataframe("XGBoost", metrics_xgb)
-  
-  # Return detailed metrics and formatted dataframe
-  return (list(metrics_xgb_dataframe = metrics_xgb_dataframe, metrics_xgb = metrics_xgb))
 }
 ```
