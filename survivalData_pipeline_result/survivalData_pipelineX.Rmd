@@ -201,6 +201,7 @@ nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
+
 ```{r, include=FALSE}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
@@ -358,9 +359,9 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
+# xgb_return = XG_Boost(train_data, test_data)
+# accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+# accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r, include=FALSE}
@@ -436,9 +437,9 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
+# xgb_return = XG_Boost(train_data, test_data)
+# accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+# accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r, include=FALSE}
@@ -514,9 +515,9 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r, include=FALSE}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
+# xgb_return = XG_Boost(train_data, test_data)
+# accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+# accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r, include=FALSE}
