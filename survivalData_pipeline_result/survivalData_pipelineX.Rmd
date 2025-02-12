@@ -375,8 +375,7 @@ accuracy_en = en_return$metrics_en
 metrics_list_BAL <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
-  list(accuracy_nb, "Naive Bayes"), 
-  list(accuracy_xgb, "XGBoost"), 
+  list(accuracy_nb, "Naive Bayes"),  
   list(accuracy_en, "Elastic Net")
 )
 accuracy_comparison_plot(metrics_list_BAL)
@@ -387,8 +386,7 @@ accuracy_comparison_plot(metrics_list_BAL)
 # including the classification model name, accuracy, data combination name.
 data_name_BAL <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BAL <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
-                                   accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_nb_dataframe, accuracy_en_dataframe)
 combined_results_BAL <- combine_classification_results(accuracy_dataframe_list_BAL, data_name_BAL)
 
 # display the combined dataframe
@@ -453,8 +451,7 @@ accuracy_en = en_return$metrics_en
 metrics_list_DB <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
-  list(accuracy_nb, "Naive Bayes"), 
-  list(accuracy_xgb, "XGBoost"), 
+  list(accuracy_nb, "Naive Bayes"),  
   list(accuracy_en, "Elastic Net")
 )
 accuracy_comparison_plot(metrics_list_DB)
@@ -465,8 +462,7 @@ accuracy_comparison_plot(metrics_list_DB)
 # including the classification model name, accuracy, data combination name.
 data_name_DB <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_DB <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
-                                   accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_nb_dataframe, accuracy_en_dataframe)
 combined_results_DB <- combine_classification_results(accuracy_dataframe_list_DB, data_name_DB)
 
 # display the combined dataframe
@@ -532,7 +528,6 @@ metrics_list_DR <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
-  list(accuracy_xgb, "XGBoost"), 
   list(accuracy_en, "Elastic Net")
 )
 accuracy_comparison_plot(metrics_list_DR)
@@ -543,8 +538,7 @@ accuracy_comparison_plot(metrics_list_DR)
 # including the classification model name, accuracy, data combination name.
 data_name_DR <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_DR <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
-                                   accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_nb_dataframe, accuracy_en_dataframe)
 combined_results_DR <- combine_classification_results(accuracy_dataframe_list_DR, data_name_DR)
 
 # display the combined dataframe
@@ -1337,5 +1331,5 @@ pander(combined_accuracy_dataframe, caption = "Combined accuracy dataframe")
 
 ```{r}
 fwrite(combined_classification_results, file = "combined_classification_results.csv")
-fwrite(combined_accuracy_dataframe, file = "balanced_accuracy.csv")
+# fwrite(combined_accuracy_dataframe, file = "balanced_accuracy.csv")
 ```
