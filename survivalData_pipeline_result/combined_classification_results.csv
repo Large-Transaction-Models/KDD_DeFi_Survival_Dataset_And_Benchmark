@@ -2,6 +2,7 @@ Model,Class_Accuracy,Negative_1_Accuracy,Balanced_Accuracy,Overall_Accuracy,Prec
 Logistic Regression,99%,2%,50%,60%,57%,4%,borrow + account liquidated
 Decision Tree,100%,2%,51%,19%,99%,3%,borrow + account liquidated
 Naive Bayes,100%,2%,51%,21%,97%,3%,borrow + account liquidated
+XGBoost,0%,99%,49%,98%,99%,99%,borrow + account liquidated
 Elastic Net,99%,2%,50%,60%,57%,4%,borrow + account liquidated
 Logistic Regression,94%,32%,63%,65%,81%,46%,borrow + deposit
 Decision Tree,82%,45%,64%,81%,7%,12%,borrow + deposit
