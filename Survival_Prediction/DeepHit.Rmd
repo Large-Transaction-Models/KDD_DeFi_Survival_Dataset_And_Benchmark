@@ -1,0 +1,406 @@
+---
+title: "DeepHit"
+output: html_document
+date: "2025-01-22"
+---
+```{r}
+# Environment setup
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+local({
+  r <- getOption("repos")
+  r["CRAN"] <- "http://cran.r-project.org"
+  options(repos = r)
+})
+
+# Required packages
+required_packages <- c(
+  "tidyverse", "survival", "survminer", "ggplot2", "pec", "prodlim",
+  "survivalmodels", "reticulate", "lubridate", "caret", "knitr"
+)
+
+install_missing <- function(pkg) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg)
+  }
+  library(pkg, character.only = TRUE)
+}
+
+sapply(required_packages, install_missing)
+
+```
+```{r}
+# Define S3 method to extract survival probabilities from a deephit model
+predictSurvProb.deephit <- function(object, newdata, times, ...) {
+  surv_mat <- predict(object, newdata = newdata, type = "surv", times = times)
+  as.matrix(surv_mat)
+}
+
+```
+
+
+
+
+
+```{r}
+# Function to normalize numeric predictor columns
+normalize_data <- function(train, test, exclude_cols = c("timeDiff", "status")) {
+  # Identify numeric predictor columns (exclude outcome variables)
+  numeric_cols <- train %>%
+    dplyr::select(where(is.numeric)) %>%
+    colnames() %>%
+    setdiff(exclude_cols)
+  
+  if (length(numeric_cols) == 0) {
+    warning("No numeric predictor columns to normalize!")
+    return(list(train = train, test = test))
+  }
+  
+  # Compute means and standard deviations for predictor columns
+  train_means <- sapply(train[, numeric_cols, drop = FALSE], mean, na.rm = TRUE)
+  train_sds   <- sapply(train[, numeric_cols, drop = FALSE], sd, na.rm = TRUE)
+  
+  # Avoid division by zero: replace any 0 SD with a small value
+  train_sds[train_sds == 0] <- 1e-6
+  
+  # Convert predictor columns to matrices for safe arithmetic operations
+  train_mat <- as.matrix(train[, numeric_cols, drop = FALSE])
+  test_mat  <- as.matrix(test[, numeric_cols, drop = FALSE])
+  
+  # Normalize: subtract mean and divide by standard deviation
+  train_mat <- sweep(train_mat, 2, train_means, FUN = "-")
+  train_mat <- sweep(train_mat, 2, train_sds,   FUN = "/")
+  test_mat  <- sweep(test_mat,  2, train_means, FUN = "-")
+  test_mat  <- sweep(test_mat,  2, train_sds,   FUN = "/")
+  
+  # Replace any NA or infinite values with 0 in the matrices
+  train_mat[is.na(train_mat)]       <- 0
+  train_mat[is.infinite(train_mat)] <- 0
+  test_mat[is.na(test_mat)]         <- 0
+  test_mat[is.infinite(test_mat)]   <- 0
+  
+  # Put the normalized predictor columns back into the original data frames
+  train[, numeric_cols] <- train_mat
+  test[, numeric_cols]  <- test_mat
+  
+  list(train = train, test = test)
+}
+
+```
+
+
+```{r}
+# DeepHit training pipeline
+deep_hit_pipeline <- function(
+  train_data, 
+  test_data,
+  time_col = "timeDiff",
+  status_col = "status",
+  epochs = 1,
+  num_nodes = c(32L, 32L),
+  # DeepHit-specific parameters
+  mod_alpha = 0.2,           # Weight of rank loss
+  sigma = 0.1,           # Scale in loss function
+  dropout = 0,
+  frac = 0,
+  cuts =10,
+  activation = "relu",
+  optimizer = "sgd",
+  l2_reg = 4.425,
+  lr_decay = 3.173e-4,
+  momentum = 0.936,
+  batch_size = 256L,
+  patience =0,
+  best_weights = FALSE,
+  lr = 0.001
+) {
+  if (is.null(train_data) || is.null(test_data)) {
+    stop("Error: train_data or test_data is NULL!")
+  }
+  
+  if (nrow(train_data) == 0 || nrow(test_data) == 0) {
+    stop("Error: train_data or test_data is empty!")
+  }
+
+  required_cols <- c(time_col, status_col)
+  if (!all(required_cols %in% colnames(train_data)) || 
+      !all(required_cols %in% colnames(test_data))) {
+    stop(paste("Error: Required columns",
+               paste(required_cols, collapse = ", "),
+               "are missing in train_data or test_data!"))
+  }
+
+  # Create the survival object for training (not directly used, but required by the model)
+  train_y <- Surv(
+    time = train_data[[time_col]],
+    event = train_data[[status_col]]
+  )
+  
+  formula_str <- paste0("Surv(", time_col, ", ", status_col, ") ~ .")
+  
+  model <- survivalmodels::deephit(
+    formula = as.formula(formula_str),
+    data = train_data,
+    num_nodes = num_nodes,
+    dropout = dropout,
+    activation = activation,
+    epochs = epochs,
+    batch_size = batch_size,
+    early_stopping = TRUE,
+    patience = 15,
+    verbose = TRUE
+  )
+  
+  # Wrapper for risk prediction
+  predict_wrapper <- function(model, newdata) {
+    tryCatch({
+      predict(model, newdata = newdata, type = "risk")
+    }, error = function(e) {
+      print("Prediction error:")
+      print(e)
+      return(rep(NA, nrow(newdata)))
+    })
+  }
+  
+  risk_scores <- predict_wrapper(model, test_data)
+  
+  if (any(is.na(risk_scores))) {
+    stop("Error: Risk scores contain NA values!")
+  }
+  
+  # Filter test_data for non-missing time and status values
+  valid_rows <- !is.na(test_data[[time_col]]) & !is.na(test_data[[status_col]])
+  if (sum(valid_rows) > 0) {
+    test_data <- test_data[valid_rows, ]
+    risk_scores <- risk_scores[valid_rows]
+    
+    if (length(risk_scores) != nrow(test_data)) {
+      stop("Error: Length of risk_scores does not match number of rows in test_data!")
+    }
+    
+    print(paste("Valid test observations:", nrow(test_data)))
+    print(summary(test_data[[time_col]]))
+    print(table(test_data[[status_col]]))
+    
+    # Check that there is at least one event before computing concordance
+    if (sum(test_data[[status_col]] == 1, na.rm = TRUE) == 0) {
+      warning("No events in test_data. Concordance index cannot be computed.")
+      cindex <- NA
+    } else {
+      cindex <- survival::concordance(
+        Surv(test_data[[time_col]], test_data[[status_col]]) ~ risk_scores
+      )$concordance
+      print(paste("C-index:", cindex))
+    }
+  } else {
+    stop("Error: No valid observations in test_data for concordance calculation!")
+  }
+  
+  list(
+    model = model,
+    cindex = cindex,
+    risk_scores = risk_scores
+  )
+}
+
+```
+
+```{r}
+# Data loading function
+load_data <- function(indexEvent = "borrow", outcomeEvent = "repay") {
+  print(paste("Loading data for indexEvent:", indexEvent, "and outcomeEvent:", outcomeEvent))
+  
+  # Make the events accessible globally if needed
+  assign("indexEvent", indexEvent, envir = .GlobalEnv)
+  assign("outcomeEvent", outcomeEvent, envir = .GlobalEnv)
+  
+  # Replace with the correct paths for your environment
+  source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/source/dataLoader.R")
+  source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/StudentData/preprocessing.R")
+
+  n_data <- preprocessing(train, test)
+  train <- as.data.frame(n_data[[1]])
+  test  <- as.data.frame(n_data[[2]])
+
+  print("Preprocessing train and test datasets...")
+
+  if (is.null(n_data) || length(n_data) < 2) {
+    stop("Error: preprocessing() returned NULL or incomplete data!")
+  }
+
+  list(train = train, test = test)
+}
+
+```
+
+```{r}
+# Example cross-validation pipeline 
+
+deepsurv_results <- local({
+  datasets <- load_data()
+  
+  # Normalize data
+  normalized_data <- normalize_data(datasets$train, datasets$test)
+  train <- normalized_data$train
+  test  <- normalized_data$test
+
+  # Create smaller dataset for testing
+  set.seed(123)
+  mini_train <- train %>% sample_n(min(nrow(train), 8000))
+  mini_test  <- test  %>% sample_n(min(nrow(test), 2000))
+  
+  # Stratified K-fold cross-validation
+  n_folds <- 5
+  fold_ids <- caret::createFolds(
+    y = mini_train$status,
+    k = n_folds,
+    list = FALSE
+  )
+  
+  cv_results <- list()
+  
+  for (fold in 1:n_folds) {
+    cat("\n=== Processing fold", fold, "/", n_folds, "===\n")
+    
+    val_idx <- which(fold_ids == fold)
+    train_fold <- mini_train[-val_idx, ]
+    val_fold  <- mini_train[val_idx, ]
+    
+    fold_result <- deep_hit_pipeline(
+      train_data = train_fold,
+      test_data  = val_fold,
+      epochs     = 10,
+      num_nodes  = c(17),
+      dropout    = 0.0,
+      lr         = 0.5,
+      optimizer  = "sgd",
+      l2_reg     = 4.425,
+      batch_size = 32,
+      momentum   = 0.936
+    )
+    
+    cv_results[[fold]] <- fold_result$cindex
+  }
+  
+  mean_cindex <- mean(unlist(cv_results), na.rm = TRUE)
+  cat("\n=== Cross-Validation Results ===\n")
+  cat("Mean C-index across folds:", mean_cindex, "\n")
+  
+  # Final training on full mini_train
+  final_model <- deep_hit_pipeline(
+    train_data = mini_train,
+    test_data  = mini_test,
+    epochs     = 10,
+    num_nodes  = c(32,16),
+    dropout    = 0,
+    lr         = 0.1,
+    optimizer  = "sgd",
+    l2_reg     = 4.425,
+    batch_size = 32,
+    momentum   = 0.936
+  )
+  
+  list(
+    cv_results  = cv_results,
+    final_model = final_model
+  )
+})
+
+```
+
+```{r}
+# 1. Define all indexEvent-outcomeEvent pairs of interest
+all_pairs <- list(
+  c("borrow", "repay"),
+  c("borrow", "deposit"),
+  c("borrow", "withdraw"),
+  c("borrow", "account liquidated"),
+  c("repay", "borrow"),
+  c("repay", "deposit"),
+  c("repay", "withdraw"),
+  c("repay", "account liquidated"),
+  c("deposit", "borrow"),
+  c("deposit", "repay"),
+  c("deposit", "withdraw"),
+  c("deposit", "account liquidated"),
+  c("withdraw", "borrow"),
+  c("withdraw", "repay"),
+  c("withdraw", "deposit"),
+  c("withdraw", "account liquidated")
+)
+
+results_df <- data.frame(
+  Dataset = character(),
+  CIndex  = numeric(),
+  IBS     = numeric(),
+  stringsAsFactors = FALSE
+)
+
+
+# 3. Loop over each pair, load data, train DeepHit, and capture C-index
+for (pair in all_pairs) {
+  cat("\n=== Processing pair:", pair[1], "-", pair[2], "===\n")
+  
+  # Load data for the current pair
+  datasets <- load_data(indexEvent = pair[[1]], outcomeEvent = pair[[2]])
+  
+  # Normalize
+  normalized_data <- normalize_data(datasets$train, datasets$test)
+  train <- normalized_data$train
+  test  <- normalized_data$test
+
+  # (Optional) sample smaller subsets for quick testing
+  set.seed(123)
+  mini_train <- train %>% dplyr::sample_n(min(nrow(train), 8000))
+  mini_test  <- test  %>% dplyr::sample_n(min(nrow(test), 2000))
+  
+  # Train DeepHit with final parameters on the current pair
+  final_model <- deep_hit_pipeline(
+    train_data = mini_train,
+    test_data  = mini_test
+    #epochs     = 10,
+    #num_nodes  = c(32,16),
+    #dropout    = 0,
+    #lr         = 0.1,
+    #optimizer  = "sgd",
+    #l2_reg     = 4.425,
+    #batch_size = 32,
+    #momentum   = 0.936
+  )
+  
+  # Define a time grid for IBS calculation using the test data's time range
+  max_time <- max(mini_test$timeDiff, na.rm = TRUE)
+  time_grid <- seq(0, max_time, length.out = 100)
+
+  # Compute the IBS using the pec package
+  pec_obj <- pec(
+    object = list(DeepHit = final_model$model),
+    formula = Surv(timeDiff, status) ~ 1,
+    data = mini_test,
+    times = time_grid,
+    cens.model = "marginal"
+  )
+  ibs_value <- ibs(pec_obj)["DeepHit"]
+
+  # Append both the C-index and IBS for the current dataset pair to results_df
+  results_df <- rbind(
+  results_df,
+  data.frame(
+    Dataset = paste0(pair[1], "-", pair[2]),
+    CIndex  = final_model$cindex,
+    IBS     = as.numeric(ibs_value)
+  )
+)
+
+}
+
+# 4. Print the results in a neat table
+knitr::kable(
+  results_df,
+  caption = "DeepHit C-Index Results for All IndexEvent-OutcomeEvent Pairs"
+)
+
+```
+
+
+
+
