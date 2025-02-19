@@ -80,7 +80,7 @@ The `get_train_test_data` function is designed to get the training and test data
 
 ```{r}
 get_train_test_data <- function(indexEvent, outcomeEvent) {
-  source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/source/dataLoader.R")
+  source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/dataLoader.R")
 }
 ```
 
