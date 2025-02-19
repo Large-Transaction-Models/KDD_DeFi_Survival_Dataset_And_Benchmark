@@ -1345,13 +1345,13 @@ ba_accuracy_dataframe_BR <- specific_accuracy_statistics(data_name_BR, "balanced
 ba_accuracy_dataframe_BW <- specific_accuracy_statistics(data_name_BW, "balanced_accuracy", 
                                                       metrics_list_BW)
 ba_accuracy_dataframe_DAL <- specific_accuracy_statistics(data_name_DAL, "balanced_accuracy", 
-                                                      metrics_list_DAL)                                                      
+                                                      metrics_list_DAL)
 ba_accuracy_dataframe_DB <- specific_accuracy_statistics(data_name_DB, "balanced_accuracy", 
                                                       metrics_list_DB)
 ba_accuracy_dataframe_DR <- specific_accuracy_statistics(data_name_DR, "balanced_accuracy", 
                                                       metrics_list_DR)
 ba_accuracy_dataframe_DW <- specific_accuracy_statistics(data_name_DW, "balanced_accuracy", 
-                                                      metrics_list_DW)                                                  
+                                                      metrics_list_DW)
 ba_accuracy_dataframe_RAL <- specific_accuracy_statistics(data_name_RAL, "balanced_accuracy", 
                                                       metrics_list_RAL)
 ba_accuracy_dataframe_RB <- specific_accuracy_statistics(data_name_RB, "balanced_accuracy", 
@@ -1361,13 +1361,13 @@ ba_accuracy_dataframe_RD <- specific_accuracy_statistics(data_name_RD, "balanced
 ba_accuracy_dataframe_RW <- specific_accuracy_statistics(data_name_RW, "balanced_accuracy", 
                                                       metrics_list_RW)
 ba_accuracy_dataframe_WAL <- specific_accuracy_statistics(data_name_WAL, "balanced_accuracy", 
-                                                      metrics_list_WAL)                                                     
+                                                      metrics_list_WAL)                                          
 ba_accuracy_dataframe_WB <- specific_accuracy_statistics(data_name_WB, "balanced_accuracy", 
                                                       metrics_list_WB)
 ba_accuracy_dataframe_WR <- specific_accuracy_statistics(data_name_WR, "balanced_accuracy", 
                                                       metrics_list_WR)
 ba_accuracy_dataframe_WD <- specific_accuracy_statistics(data_name_WD, "balanced_accuracy", 
-                                                      metrics_list_WD)                                                                                               
+                                                      metrics_list_WD)                                                                                             
 combined_accuracy_dataframe <- combine_accuracy_dataframes(
   list(ba_accuracy_dataframe_BAL, ba_accuracy_dataframe_BD, ba_accuracy_dataframe_BR, 
        ba_accuracy_dataframe_BW, ba_accuracy_dataframe_DAL, ba_accuracy_dataframe_DB, 

@@ -20,9 +20,6 @@ calculate_model_metrics <- function(confusion_matrix, binary_predictions, model_
   # balanced accuracy: Average of Sensitivity and Specificity
   balanced_accuracy <- (class_accuracy + negative_1_accuracy) / 2
   
-  # overall accuracy: (TP + TN) / (TP + TN + FP + FN)
-  overall_accuracy <- (TP + TN) / (TP + TN + FP + FN)
-  
   # precision
   precision <- TP / (TP + FP)
   
@@ -31,30 +28,18 @@ calculate_model_metrics <- function(confusion_matrix, binary_predictions, model_
   
   # print out all the accuracy records
   print(paste(model_name, "model prediction accuracy:"))
-  cat("Class accuracy:", sprintf("%.0f%%", class_accuracy * 100), "\n")
-  cat("Negative 1 accuracy:", sprintf("%.0f%%", negative_1_accuracy * 100), "\n")
-  cat("Balanced accuracy:", sprintf("%.0f%%", balanced_accuracy * 100), "\n")
-  cat("Overall accuracy:", sprintf("%.0f%%", overall_accuracy * 100), "\n")
-  cat("Precision:", sprintf("%.0f%%", precision * 100), "\n")
-  cat("F1 score:", sprintf("%.0f%%", f1_score * 100), "\n")
+  cat("Balanced accuracy:", sprintf("%.2f%%", balanced_accuracy * 100), "\n")
+  cat("F1 score:", sprintf("%.2f%%", f1_score * 100), "\n")
   
-  return (list(class_accuracy = class_accuracy,
-               negative_1_accuracy = negative_1_accuracy,
-               balanced_accuracy = balanced_accuracy,
-               overall_accuracy = overall_accuracy,
-               precision = precision,
+  return (list(balanced_accuracy = balanced_accuracy, 
                f1_score = f1_score))
 }
 
 get_dataframe <- function(model_name, metrics) {
   metrics_dataframe <- data.frame(
-    Model = model_name,
-    Class_Accuracy = sprintf("%.0f%%", metrics$class_accuracy * 100),
-    Negative_1_Accuracy = sprintf("%.0f%%", metrics$negative_1_accuracy * 100),
-    Balanced_Accuracy = sprintf("%.0f%%", metrics$balanced_accuracy * 100),
-    Overall_Accuracy = sprintf("%.0f%%", metrics$overall_accuracy * 100),
-    Precision = sprintf("%.0f%%", metrics$precision * 100),
-    F1_Score = sprintf("%.0f%%", metrics$f1_score * 100)
+    Model = model_name, 
+    Balanced_Accuracy = sprintf("%.2f%%", metrics$balanced_accuracy * 100), 
+    F1_Score = sprintf("%.2f%%", metrics$f1_score * 100)
   )
   return (metrics_dataframe)
 }
@@ -111,12 +96,8 @@ accuracy_comparison_plot <- function(metrics_list) {
     
     # create a temporary dataframe for this model
     temp_df <- data.frame(
-      Model = model_name,
-      ClassA = model_metrics$class_accuracy,
-      Negative_1A = model_metrics$negative_1_accuracy,
-      BalancedA = model_metrics$balanced_accuracy,
-      OverallA = model_metrics$overall_accuracy,
-      Precision = model_metrics$precision,
+      Model = model_name, 
+      BalancedA = model_metrics$balanced_accuracy, 
       F1_score = model_metrics$f1_score
     )
     
@@ -155,20 +136,8 @@ specific_accuracy_statistics <- function(event_pair, accuracy_type, metrics_list
     accuracy_data <- metric_item[[1]]
     # get the model name
     model_name <- metric_item[[2]]
-    if (accuracy_type == "class_accuracy") {
-      results[[model_name]] <- round(accuracy_data$class_accuracy * 100, 1)
-    }
-    else if (accuracy_type == "negative_1_accuracy") {
-      results[[model_name]] <- round(accuracy_data$negative_1_accuracy * 100, 1)
-    }
-    else if (accuracy_type == "balanced_accuracy") {
+    if (accuracy_type == "balanced_accuracy") {
       results[[model_name]] <- round(accuracy_data$balanced_accuracy * 100, 1)
-    }
-    else if (accuracy_type == "overall_accuracy") {
-      results[[model_name]] <- round(accuracy_data$overall_accuracy * 100, 1)
-    }
-    else if (accuracy_type == "precision") {
-      results[[model_name]] <- round(accuracy_data$precision * 100, 1)
     }
     else if (accuracy_type == "f1_score") {
       results[[model_name]] <- round(accuracy_data$f1_score * 100, 1)
