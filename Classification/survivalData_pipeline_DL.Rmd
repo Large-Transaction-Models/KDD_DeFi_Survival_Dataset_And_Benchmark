@@ -1,0 +1,144 @@
+---
+title: "DMLR DeFi Survival Data Pipeline - Deep learning"
+author: "Hanzhen Qin - qinh2"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_notebook: default
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: yes
+    theme: united
+---
+
+```{r, include=FALSE}
+# Check and install required R packages
+if (!require("conflicted")) {
+  install.packages("conflicted", dependencies = TRUE)
+  library(conflicted)
+}
+
+# Set default CRAN repository
+local({
+  r <- getOption("repos")
+  r["CRAN"] <- "http://cran.r-project.org"
+  options(repos = r)
+})
+
+# Define the list of required packages
+required_packages <- c(
+  "rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
+  "caret", "survival", "survminer", "ggplot2", 
+  "kableExtra", "rpart", "glmnet", "data.table", "reshape2", "pROC", 
+  "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "parallel", "reticulate"
+)
+
+# Loop through the package list and install missing packages
+for (pkg in required_packages) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg, dependencies = TRUE)
+    library(pkg, character.only = TRUE)
+  }
+}
+
+# Handle function name conflicts
+conflict_prefer("slice", "dplyr")
+conflict_prefer("filter", "dplyr")
+
+# Set knitr options for R Markdown
+knitr::opts_chunk$set(echo = TRUE)
+
+# Rename dplyr functions to avoid conflicts with other packages
+select <- dplyr::select
+rename <- dplyr::rename
+summarize <- dplyr::summarize
+group_by <- dplyr::group_by
+```
+
+# Survival Data Pipeline
+
+```{r}
+source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/data_preprocessing.R")
+source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/model_evaluation_visual.R")
+source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/classification_models.R")
+source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/get_classification_cutoff.R")
+source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/deep_learning_models.R")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "deposit"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+# If you want to check the train and test data, you can run the following codes.
+# cat("Train data:\n")
+# summary(train)
+# cat("Test data:\n")
+# summary(test)
+```
+
+Using the `get_classification_cutoff` funtion to get the optimal timeDiff, then we will call the `data_processing` function above to get all the training data and test data.
+
+```{r}
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+If the ratio of "No" labels to "Yes" labels in the dataset is significantly imbalanced, we can utilize the `smote_data` function to generate a new, more balanced dataset. This balanced dataset ensures that both classes are better represented, helping to mitigate the bias introduced by class imbalance and ultimately improving the accuracy and reliability of our classification model.
+
+```{r}
+train_data <- smote_data(train_data)
+```
+
+Then you can check the updated balanced version of train data.
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+After obtaining the train and test data, we will apply all the classification models to evaluate the relationship between these events.
+
+```{r}
+dh_return = deephit(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+# ts_return = transformer_survival(train_data, test_data)
+# accuracy_ts_dataframe = ts_return$metrics_ts_dataframe
+# accuracy_ts = ts_return$metrics_ts
+```
+
+```{r}
+# compare all the classification models
+metrics_list_BD <- list(
+  list(accuracy_dh, "DeepHit")
+)
+accuracy_comparison_plot(metrics_list_BD)
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BD <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BD <- list(accuracy_dh_dataframe)
+combined_results_BD <- combine_classification_results(accuracy_dataframe_list_BD, data_name_BD)
+
+# display the combined dataframe
+pander(combined_results_BD, caption = "Classification Model Performance")
+```

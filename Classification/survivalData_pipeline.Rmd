@@ -249,6 +249,14 @@ calculate_model_metrics <- function(confusion_matrix, binary_predictions, model_
   # f1 score
   f1_score <- 2 * (precision * negative_1_accuracy) / (precision + negative_1_accuracy)
   
+  if (is.nan(balanced_accuracy)) {
+    balanced_accuracy <- 0.50
+  }
+  
+  if (is.nan(f1_score)) {
+    f1_score <- 0.50
+  }
+  
   # print out all the accuracy records
   print(paste(model_name, "model prediction accuracy:"))
   cat("Balanced accuracy:", sprintf("%.2f%%", balanced_accuracy * 100), "\n")
