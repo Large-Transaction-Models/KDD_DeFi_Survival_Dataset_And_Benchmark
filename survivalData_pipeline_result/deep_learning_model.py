@@ -30,23 +30,28 @@ class DeepHit(nn.Module):
         model.eval()
         return model
 
+import pandas as pd
+
 def train_deephit(train_data, epochs=50, lr=0.001):
-    """Train the DeepHit model using train_data"""
+    # If train_data is not a pandas DataFrame, convert it
+    if not hasattr(train_data, 'columns'):
+        train_data = pd.DataFrame(train_data)
+    
     if 'event' not in train_data.columns:
         raise ValueError("train_data must contain an 'event' column.")
-
+    
     train_features = train_data.drop(columns=['event']).values
     train_labels = train_data['event'].values
-
+    
     input_dim = train_features.shape[1]
     model = DeepHit(input_dim=input_dim, hidden_dim=64, output_dim=2).to(device)
-
+    
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
-
+    
     X_train = torch.tensor(train_features, dtype=torch.float32).to(device)
     y_train = torch.tensor(train_labels, dtype=torch.long).to(device)
-
+    
     for epoch in range(epochs):
         optimizer.zero_grad()
         outputs = model(X_train)
@@ -55,7 +60,7 @@ def train_deephit(train_data, epochs=50, lr=0.001):
         optimizer.step()
         if epoch % 10 == 0:
             print(f"Epoch {epoch}, Loss: {loss.item()}")
-
+    
     torch.save(model.state_dict(), "deephit_model.pth")
 
 def predict_with_deephit(test_data):
