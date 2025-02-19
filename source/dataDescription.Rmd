@@ -1,0 +1,99 @@
+```{r}
+library(readr)
+library(dplyr)
+library(RColorBrewer)
+library(tidyverse)
+library(lubridate)
+library(survival)
+library(survminer)
+library(ggpubr)
+library(data.table)
+library(dotenv)
+
+select <- dplyr::select
+rename <- dplyr::rename
+mutate <- dplyr::mutate
+group_by <- dplyr::group_by
+load_dot_env(".env")
+
+
+# Depending on the environment, load transactions and other helper data from the proper data directory
+if(Sys.getenv("DEVMODE") == "TRUE"){
+  stableCoins <- read_csv("~/data/IDEA_DeFi_Research/Data/Coin_Info/stablecoins.csv")
+  transactions <- read_rds("~/data/IDEA_DeFi_Research/Data/Lending_Protocols/Aave/V2/Mainnet/Experimental/transactions_user_market_time.rds") 
+  
+  
+} else{
+  stableCoins <- read_csv("./Data/Other_Data/stablecoins.csv")
+  transactions <- read_csv("./Data/Raw_Transaction_Data_Sample/transactionsSample.csv") 
+  
+}
+
+cutoffDate_Q3_2024 = 1727755200 # the end of Q3 2024
+
+transactions <- transactions %>%
+  filter(timestamp <= cutoffDate_Q3_2024) %>%
+  mutate(coinType = case_when(reserve %in% stableCoins$symbol ~ "Stable",
+                              TRUE ~ "Non-Stable"))
+```
+
+```{r}
+# How many unique users are in the dataset?
+uniqueUsers <- transactions %>%
+  select(user) %>%
+  distinct()
+
+# How many unique coins are in the dataset?
+uniqueCoins <- transactions %>%
+  select(reserve) %>%
+  distinct()
+```
+
+```{r}
+# Count the total number of records in each of the sixteen datasets:
+dataPath <- "../Data/Survival_Data/"
+
+indexEvents <- list.files(dataPath)
+totalRecords= 0
+totalCensoredEvents = 0
+totalCensoredRate = 0
+
+for(indexEvent in indexEvents){
+  
+  outcomeEvents <- list.files(paste0(dataPath, indexEvent))
+  
+  for(outcomeEvent in outcomeEvents){
+    
+    if(outcomeEvent %in% c("X_test", "X_train", "Liquidation Performed")){
+      next
+    }
+    
+    y_train <- read_rds(paste0(dataPath, indexEvent, "/", outcomeEvent, "/y_train.rds"))
+    
+    y_test <- read_rds(paste0(dataPath, indexEvent, "/", outcomeEvent, "/y_test.rds"))
+    
+    records = nrow(y_train) + nrow(y_test)
+    
+    allY <- bind_rows(y_train, y_test)
+    
+    totalRecords = totalRecords + records
+    
+    numCensored = nrow(y_train) - sum(y_train$status)
+    numCensored = numCensored + nrow(y_test) - sum(y_test$status)
+    
+    totalCensoredEvents = totalCensoredEvents + numCensored
+    censoredRate = numCensored/records
+    meanDelay = mean(allY$timeDiff)
+    
+    print(paste0(indexEvent, " + ", outcomeEvent, ": records: ", records, " numCensored: ", numCensored, " uncensored: ", records-numCensored, " mean delay: ", meanDelay/86400, " censoredRate: ", censoredRate))
+    
+    totalCensoredRate = totalCensoredRate + censoredRate
+    
+  }
+  
+}
+totalCensoredRate = totalCensoredRate / 16
+
+```
+
+
