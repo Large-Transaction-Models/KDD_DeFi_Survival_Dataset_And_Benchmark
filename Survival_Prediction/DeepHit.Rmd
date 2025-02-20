@@ -1,7 +1,7 @@
 ---
 title: "DeepHit"
 output: html_document
-date: "2025-01-22"
+date: "2025-02-20"
 ---
 ```{r}
 # Environment setup
@@ -87,7 +87,7 @@ normalize_data <- function(train, test, exclude_cols = c("timeDiff", "status")) 
 ```
 
 ```{r}
-# DeepHit training pipeline
+# Sample DeepHit training pipeline
 deep_hit_pipeline <- function(
   train_data, 
   test_data,
@@ -231,7 +231,7 @@ load_data <- function(indexEvent = "borrow", outcomeEvent = "repay") {
 }
 ```
 
-```{r}
+```{r, eval= FALSE}
 # Example cross-validation pipeline 
   datasets <- load_data()
   
@@ -313,6 +313,7 @@ load_data <- function(indexEvent = "borrow", outcomeEvent = "repay") {
 ```
 
 ```{r, eval = FALSE}
+# Example calculating IBS
 # Load required libraries
 library(survival)
 library(ipred)
@@ -430,8 +431,8 @@ for (pair in all_pairs) {
 
   # (Optional) sample smaller subsets for quick testing
   set.seed(123)
-  mini_train <- train %>% dplyr::sample_n(min(nrow(train), 8000))
-  mini_test  <- test  %>% dplyr::sample_n(min(nrow(test), 2000))
+  mini_train <- train %>% dplyr::sample_n(min(nrow(train), 218961))
+  mini_test  <- test  %>% dplyr::sample_n(min(nrow(test), 170454))
   
   # Train DeepHit with final parameters on the current pair
   final_model <- deep_hit_pipeline(
