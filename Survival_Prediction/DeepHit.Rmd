@@ -15,7 +15,7 @@ local({
 # Required packages
 required_packages <- c(
   "tidyverse", "survival", "survminer", "ggplot2", "pec", "prodlim",
-  "survivalmodels", "reticulate", "lubridate", "caret", "knitr"
+  "survivalmodels", "reticulate", "lubridate", "caret", "knitr", "data.table"
 )
 
 install_missing <- function(pkg) {
@@ -26,18 +26,7 @@ install_missing <- function(pkg) {
 }
 
 sapply(required_packages, install_missing)
-
 ```
-```{r}
-# Define S3 method to extract survival probabilities from a deephit model
-predictSurvProb.deephit <- function(object, newdata, times, ...) {
-  surv_mat <- predict(object, newdata = newdata, type = "surv", times = times)
-  as.matrix(surv_mat)
-}
-
-```
-
-
 
 
 
@@ -45,6 +34,16 @@ predictSurvProb.deephit <- function(object, newdata, times, ...) {
 # Function to normalize numeric predictor columns
 normalize_data <- function(train, test, exclude_cols = c("timeDiff", "status")) {
   # Identify numeric predictor columns (exclude outcome variables)
+  features_to_drop <- c("indexTime", "outcomeTime", "id", "Index Event", "Outcome Event",
+                      "deployment", "version", "indexID", "user", 
+                      "liquidator", "pool", "timestamp", "type", "datetime", "quarter_start_date")
+  
+  train <- train %>%
+    select(-any_of(features_to_drop))
+  
+  test <- test %>%
+    select(-any_of(features_to_drop))
+  
   numeric_cols <- train %>%
     dplyr::select(where(is.numeric)) %>%
     colnames() %>%
@@ -87,7 +86,6 @@ normalize_data <- function(train, test, exclude_cols = c("timeDiff", "status")) 
 
 ```
 
-
 ```{r}
 # DeepHit training pipeline
 deep_hit_pipeline <- function(
@@ -102,7 +100,8 @@ deep_hit_pipeline <- function(
   sigma = 0.1,           # Scale in loss function
   dropout = 0,
   frac = 0,
-  cuts =10,
+  cuts = 50,
+  cutpoints = NULL,
   activation = "relu",
   optimizer = "sgd",
   l2_reg = 4.425,
@@ -147,7 +146,9 @@ deep_hit_pipeline <- function(
     batch_size = batch_size,
     early_stopping = TRUE,
     patience = 15,
-    verbose = TRUE
+    verbose = TRUE,
+    cuts=50,
+    cutpoints=cutpoints
   )
   
   # Wrapper for risk prediction
@@ -201,7 +202,6 @@ deep_hit_pipeline <- function(
     risk_scores = risk_scores
   )
 }
-
 ```
 
 ```{r}
@@ -214,8 +214,8 @@ load_data <- function(indexEvent = "borrow", outcomeEvent = "repay") {
   assign("outcomeEvent", outcomeEvent, envir = .GlobalEnv)
   
   # Replace with the correct paths for your environment
-  source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/source/dataLoader.R")
-  source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/StudentData/preprocessing.R")
+  source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/dataLoader.R")
+  source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Survival_Prediction/preprocessing.R")
 
   n_data <- preprocessing(train, test)
   train <- as.data.frame(n_data[[1]])
@@ -229,20 +229,17 @@ load_data <- function(indexEvent = "borrow", outcomeEvent = "repay") {
 
   list(train = train, test = test)
 }
-
 ```
 
 ```{r}
 # Example cross-validation pipeline 
-
-deepsurv_results <- local({
   datasets <- load_data()
   
   # Normalize data
   normalized_data <- normalize_data(datasets$train, datasets$test)
   train <- normalized_data$train
   test  <- normalized_data$test
-
+  
   # Create smaller dataset for testing
   set.seed(123)
   mini_train <- train %>% sample_n(min(nrow(train), 8000))
@@ -264,7 +261,12 @@ deepsurv_results <- local({
     val_idx <- which(fold_ids == fold)
     train_fold <- mini_train[-val_idx, ]
     val_fold  <- mini_train[val_idx, ]
-    
+    #browser()
+    times <- seq(
+      from = min(mini_test$timeDiff),  # start time (in days)
+      to = max(mini_test$timeDiff),    # end time (in days)
+      length.out = 50                            # number of time points
+    )
     fold_result <- deep_hit_pipeline(
       train_data = train_fold,
       test_data  = val_fold,
@@ -272,6 +274,8 @@ deepsurv_results <- local({
       num_nodes  = c(17),
       dropout    = 0.0,
       lr         = 0.5,
+      cuts = 50,
+      cutpoints = times,
       optimizer  = "sgd",
       l2_reg     = 4.425,
       batch_size = 32,
@@ -296,6 +300,8 @@ deepsurv_results <- local({
     optimizer  = "sgd",
     l2_reg     = 4.425,
     batch_size = 32,
+    cuts = 50,
+    cutpoints = times,
     momentum   = 0.936
   )
   
@@ -303,9 +309,84 @@ deepsurv_results <- local({
     cv_results  = cv_results,
     final_model = final_model
   )
-})
 
 ```
+
+```{r, eval = FALSE}
+# Load required libraries
+library(survival)
+library(ipred)
+
+# Ensure your test dataset does not have missing survival times or status
+mini_test <- na.omit(mini_test)
+mini_train <- na.omit(mini_train)
+
+# Convert time to days (if needed)
+mini_test$timeDiff <- mini_test$timeDiff / 86400  
+mini_train$timeDiff <- mini_train$timeDiff / 86400  
+
+# Define time points for IBS calculation
+times <- seq(0, max(mini_test$timeDiff, na.rm = TRUE), length.out = 50)
+
+# Extract event status and survival times
+status_test <- mini_test$status
+time_test <- mini_test$timeDiff
+
+# Create a survival object for test data
+Surv_test <- Surv(time_test, status_test)
+
+deephit_model <- final_model$model  # Extract the trained DeepHit model
+
+# Predict survival probabilities at specified time points
+predicted_survival_probs <- predict(deephit_model, mini_test, times = times)
+
+# Ensure predictions are in the correct format
+predicted_survival_probs <- as.matrix(predicted_survival_probs)
+
+# Compute Brier Scores
+brier_scores <- numeric(length(times))
+
+for (i in seq_along(times)) {
+  t <- times[i]
+  surv_prob_t <- predicted_survival_probs[, i]  # Get predicted survival probabilities for time t
+  
+  # Compute Brier score only if no missing values
+  if (!any(is.na(surv_prob_t))) {
+    brier_scores[i] <- sbrier(
+      obj = Surv_test,
+      pred = surv_prob_t,
+      btime = t
+    )
+  } else {
+    brier_scores[i] <- NA  # Avoid errors
+  }
+}
+
+# Compute the Integrated Brier Score (IBS)
+# Remove NA values from Brier scores to avoid integration errors
+valid_times <- times[!is.na(brier_scores)]
+valid_brier_scores <- brier_scores[!is.na(brier_scores)]
+
+# Compute IBS using the trapezoidal rule
+dtimes <- diff(valid_times)
+avg_brier <- (valid_brier_scores[-1] + valid_brier_scores[-length(valid_brier_scores)]) / 2
+area_under_curve <- sum(dtimes * avg_brier)
+
+# Final Integrated Brier Score (IBS)
+integrated_brier_score <- area_under_curve / (max(valid_times) - min(valid_times))
+
+# Print IBS result
+print(integrated_brier_score)
+
+```
+
+
+
+
+
+
+
+
 
 ```{r}
 # 1. Define all indexEvent-outcomeEvent pairs of interest
@@ -331,7 +412,6 @@ all_pairs <- list(
 results_df <- data.frame(
   Dataset = character(),
   CIndex  = numeric(),
-  IBS     = numeric(),
   stringsAsFactors = FALSE
 )
 
@@ -356,7 +436,8 @@ for (pair in all_pairs) {
   # Train DeepHit with final parameters on the current pair
   final_model <- deep_hit_pipeline(
     train_data = mini_train,
-    test_data  = mini_test
+    test_data  = mini_test,
+    cuts = 50
     #epochs     = 10,
     #num_nodes  = c(32,16),
     #dropout    = 0,
@@ -367,27 +448,67 @@ for (pair in all_pairs) {
     #momentum   = 0.936
   )
   
-  # Define a time grid for IBS calculation using the test data's time range
-  max_time <- max(mini_test$timeDiff, na.rm = TRUE)
-  time_grid <- seq(0, max_time, length.out = 100)
-
-  # Compute the IBS using the pec package
-  pec_obj <- pec(
-    object = list(DeepHit = final_model$model),
-    formula = Surv(timeDiff, status) ~ 1,
-    data = mini_test,
-    times = time_grid,
-    cens.model = "marginal"
-  )
-  ibs_value <- ibs(pec_obj)["DeepHit"]
+  
+    # Ensure the test dataset does not have missing survival times or status
+    mini_test <- na.omit(mini_test)
+    mini_train <- na.omit(mini_train)
+    
+    # Convert time to days (if needed)
+    mini_test$timeDiff <- mini_test$timeDiff / 86400  
+    mini_train$timeDiff <- mini_train$timeDiff / 86400
+    
+    # Define time points for IBS calculation
+    times <- seq(0, max(mini_test$timeDiff, na.rm = TRUE), length.out = 50)
+  
+    # Extract event status and survival times
+    status_test <- mini_test$status
+    time_test <- mini_test$timeDiff
+    
+    # Create a survival object for test data
+    Surv_test <- Surv(time_test, status_test)
+    
+    deephit_model <- final_model$model  # Extract the trained DeepHit model
+    predicted_survival_probs <- predict(deephit_model, mini_test, times = times)
+    predicted_survival_probs <- as.matrix(predicted_survival_probs)
+    brier_scores <- numeric(length(times))
+    
+    for (i in seq_along(times)) {
+      t <- times[i]
+     surv_prob_t <- predicted_survival_probs[, i]  # Get predicted survival probabilities for time t
+  
+      # Compute Brier score only if no missing values
+      if (!any(is.na(surv_prob_t))) {
+        brier_scores[i] <- sbrier(
+          obj = Surv_test,
+          pred = surv_prob_t,
+          btime = t
+        )
+      } else {
+        brier_scores[i] <- NA  # Avoid errors
+      }
+    }
+    
+    # Compute the Integrated Brier Score (IBS)
+    # Remove NA values from Brier scores to avoid integration errors
+    valid_times <- times[!is.na(brier_scores)]
+    valid_brier_scores <- brier_scores[!is.na(brier_scores)]
+    
+    # Compute IBS using the trapezoidal rule
+    dtimes <- diff(valid_times)
+    avg_brier <- (valid_brier_scores[-1] + valid_brier_scores[-length(valid_brier_scores)]) / 2
+    area_under_curve <- sum(dtimes * avg_brier)
+  
+    # Final Integrated Brier Score (IBS)
+    integrated_brier_score <- area_under_curve / (max(valid_times) - min(valid_times))
+  
 
   # Append both the C-index and IBS for the current dataset pair to results_df
   results_df <- rbind(
   results_df,
   data.frame(
     Dataset = paste0(pair[1], "-", pair[2]),
-    CIndex  = final_model$cindex,
-    IBS     = as.numeric(ibs_value)
+    CIndex  = max(final_model$cindex, 1-final_model$cindex),
+    IBS     = integrated_brier_score
   )
 )
 
@@ -400,7 +521,7 @@ knitr::kable(
 )
 
 ```
-
-
-
+```{r}
+source("compute_IBS.R")
+```
 
