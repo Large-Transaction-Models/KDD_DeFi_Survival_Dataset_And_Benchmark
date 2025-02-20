@@ -3,13 +3,15 @@ borrow + account liquidated,50.4,50.7,50.7,49.3,50.4
 borrow + deposit,62.9,63.7,66,64.5,62.9
 borrow + repay,68.7,70.9,71.9,67.5,66.9
 borrow + withdraw,61.4,63.6,66.1,54.7,61.4
-deposit + borrow,61.8,58.6,52.1,,61.8
-deposit + repay,62.1,58.6,48,,62.1
+deposit + account liquidated,50.1,50.1,50.1,50,50.1
+deposit + borrow,61.8,58.6,52.1,50,61.8
+deposit + repay,62.1,58.6,48,50,62.1
 deposit + withdraw,76.9,78.4,72,77.6,75.9
 repay + account liquidated,50.1,51.1,50,50.2,50.1
 repay + borrow,70.6,77.9,68.5,76.8,72.3
 repay + deposit,63.6,61.7,67.4,75.7,63.6
 repay + withdraw,62.1,58.5,68.4,42.7,62.1
+withdraw + account liquidated,50.1,50.1,50.1,50,50.1
 withdraw + borrow,62.4,49.1,59.3,88.9,62.4
 withdraw + repay,61.9,50,66.7,54.9,61.9
 withdraw + deposit,82,82,75.1,69,76.2
