@@ -1,5 +1,5 @@
 ---
-title: "DMLR DeFi Survival Data Pipeline"
+title: "DeFi Survival Data Pipeline"
 author: "Hanzhen Qin(qinh2)"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
@@ -30,7 +30,7 @@ required_packages <- c(
   "rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
   "caret", "survival", "survminer", "ggplot2", 
   "kableExtra", "rpart", "glmnet", "data.table", "reshape2", "pROC", 
-  "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "parallel"
+  "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "parallel", "reticulate"
 )
 
 # Loop through the package list and install missing packages
@@ -61,17 +61,20 @@ group_by <- dplyr::group_by
 
 * Summary of work
   
-  * Data preprocessing: `data_processing`, `get_train_test_data`, `smote_data`, 
+  * Data Preprocessing: `data_processing`, `get_train_test_data`, `smote_data`, 
   `get_classification_cutoff`
   
-  * Model Performance Evaluation and Visualization : `calculate_model_metrics`, `get_dataframe`,
+  * Model Performance Evaluation And Visualization : `calculate_model_metrics`, `get_dataframe`,
   `combine_classification_results`, `accuracy_comparison_plot`, `get_percentage`, 
   `specific_accuracy_statistics`, `combine_accuracy_dataframes`
   
-  * Classification model: `logistic_regression`, `decision_tree`, `naive_bayes`, `XG_Boost`, 
-  `elastic_net`, `logistic_regression_op`, `decision_tree_op`, `naive_bayes_op`, `elastic_net_op`
-  
+  * Classification Model Development And Optimization: `logistic_regression`, `decision_tree`, 
+  `naive_bayes`, `XG_Boost`, `elastic_net`, `logistic_regression_op`, `decision_tree_op`, 
+  `naive_bayes_op`, `elastic_net_op`
 
+  * Deep Learning Classification Model: `deephit_model`, `deephit_model.py`, `transformation_surv_model`, 
+  `transformation_surv_model.py`
+  
 ## Data Preprocessing
 
 ### def get_train_test_data
@@ -221,7 +224,7 @@ smote_data <- function(train_data, target_var = "event", seed = 123) {
 }
 ```
 
-## Model Performance Evaluation and Visualization
+## Model Performance Evaluation And Visualization
 
 ### def calculate_model_metrics
 
@@ -434,7 +437,7 @@ combine_accuracy_dataframes <- function(df_list) {
 }
 ```
 
-## Classification Model Development and Optimization
+## Classification Model Development And Optimization
 
 ### def logistic_regression
 
@@ -1170,4 +1173,576 @@ elastic_net_op <- function(train_data, test_data) {
   # Return both the detailed metrics list and the formatted dataframe
   return (list(metrics_en_dataframe = metrics_en_dataframe, metrics_en = metrics_en))
 }
+```
+
+## Deep Learning Classification Model
+
+### def deephit_model
+
+The deephit_model function is an R wrapper that prepares data and hyperparameters for training a DeepHit neural network model via Python integration It accepts training and test datasets and first validates that these inputs are non-null, non-empty, and include the required "event" column The function then splits the training data into an 80% training set and a 20% validation set and removes any unnecessary "id" columns before converting all features to numeric values and handling missing data by imputing medians The labels are adjusted to a binary format (0/1) and all data is converted into matrix form to ensure compatibility with the Python model The model parameters, including the number of epochs (default 10), the architecture specified by num_nodes (default two layers with 64 nodes each), dropout rate (default 0), batch size (default 256), and learning rate (default 0.001), are packaged along with the prepared data and transferred to Python using r_to_py The Python script implementing the DeepHit model is sourced, and the model is trained using the provided parameters before generating predictions on the test dataset These predictions are then converted back to R, evaluated using a confusion matrix, and processed to calculate performance metrics.
+
+```{r}
+deephit_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L, 64L), 
+                          dropout = 0, batch_size = 256L, lr = 0.001) {
+  
+  # library(reticulate) # Enables integration with Python, allowing R to call Python functions
+  # library(dplyr) # Provides functions for data manipulation and transformation
+  # Data Validation: Ensure both training and testing datasets are provided, not empty, and contain the required
+  # 'event' column.
+  if (is.null(train_data) || is.null(test_data)) {
+    stop("Error: train_data or test_data is NULL!")
+  }
+  if (nrow(train_data) == 0 || nrow(test_data) == 0) {
+    stop("Error: train_data or test_data is empty!")
+  }
+  if (!("event" %in% colnames(train_data)) || !("event" %in% colnames(test_data))) {
+    stop("Error: 'event' column is missing in train_data or test_data!")
+  }
+  
+  # Split the training data into training (80%) and validation (20%) subsets
+  set.seed(123) # Setting seed for reproducibility
+  train_idx <- sample(seq_len(nrow(train_data)), size = 0.8 * nrow(train_data))
+  val_idx <- setdiff(seq_len(nrow(train_data)), train_idx)
+  train_subset <- train_data[train_idx, ]
+  val_subset <- train_data[val_idx, ]
+  
+  # Preprocess: Remove the "id" column if it exists in any of the datasets, as it is not needed for model
+  # training.
+  if ("id" %in% names(train_subset)) {
+    train_subset <- train_subset %>% select(-id)
+  }
+  if ("id" %in% names(val_subset)) {
+    val_subset <- val_subset %>% select(-id)
+  }
+  if ("id" %in% names(test_data)) {
+    test_data <- test_data %>% select(-id)
+  }
+  
+  # Feature and Label Extraction:
+  # For each dataset, separate the features (all columns except 'event') and the labels (the 'event' column).
+  X_train <- train_subset %>% select(-event)
+  y_train <- train_subset$event
+  X_val <- val_subset %>% select(-event)
+  y_val <- val_subset$event
+  X_test <- test_data %>% select(-event)
+  y_test <- test_data$event
+  
+  
+  # Define a helper function to convert input data to numeric type and handle missing values
+  # This function checks the type of the input:
+  # - If already numeric, it is returned as-is
+  # - If a factor or character, it converts to numeric (with warnings suppressed)
+  # - Missing values (NA) are replaced with the median of the column; if median is unavailable, 0 is used
+  convert_to_numeric <- function(x) {
+    if (is.numeric(x)) {
+      res <- x
+    } else if (is.factor(x)) {
+      res <- suppressWarnings(as.numeric(as.character(x)))
+    } else if (is.character(x)) {
+      res <- suppressWarnings(as.numeric(x))
+    } else {
+      res <- suppressWarnings(as.numeric(x))
+    }
+    if (any(is.na(res))) {
+      med <- median(res, na.rm = TRUE)
+      if (is.na(med)) med <- 0
+      res[is.na(res)] <- med
+    }
+    return(res)
+  }
+  
+  # Apply the conversion to numeric for all features in the training, validation, and testing sets
+  X_train <- X_train %>% mutate(across(everything(), convert_to_numeric))
+  X_val <- X_val %>% mutate(across(everything(), convert_to_numeric))
+  X_test <- X_test %>% mutate(across(everything(), convert_to_numeric))
+  
+  # Convert data frames to matrices because the Python model expects matrix inputs
+  X_train <- as.matrix(X_train)
+  X_val <- as.matrix(X_val)
+  X_test <- as.matrix(X_test)
+  
+  # Convert labels to binary numeric values (0/1)
+  # Assumes the original labels start at 1, so subtract 1 to get 0-based labels
+  y_train <- as.numeric(y_train) - 1
+  y_val <- as.numeric(y_val) - 1
+  y_test <- as.numeric(y_test) - 1
+  
+  # Prepare Data for Python:
+  # Package training data along with validation data and model parameters into a list
+  # Then convert the list to a Python object using r_to_py
+  train_data_py <- r_to_py(list(
+    X = X_train,
+    y = y_train,
+    val_X = X_val,
+    val_y = y_val,
+    epochs = as.integer(epochs),
+    num_nodes = num_nodes,
+    dropout = dropout,
+    batch_size = as.integer(batch_size),
+    lr = lr
+  ))
+  
+  # Similarly, prepare the test dataset for prediction
+  test_data_py <- r_to_py(list(X = X_test, y = y_test))
+  
+  # Load the Python script that contains the implementation of the DeepHit model
+  source_python("deephit_model.py")
+  
+  # Train the DeepHit model using the training data prepared in Python
+  deep_model <- train_deephit(train_data_py)
+  
+  # Use the trained model to make predictions on the test data
+  predictions <- deep_model$predict(test_data_py[["X"]])
+  
+  # Convert the predictions from Python back to R
+  predictions <- py_to_r(predictions)
+  
+  # Create a confusion matrix comparing the predicted labels to the actual test labels
+  test_conf_matrix <- table(
+    Predicted = factor(predictions, levels = c(0, 1)),
+    Actual = factor(y_test, levels = c(0, 1))
+  )
+  
+  # Calculate model performance metrics (such as accuracy, sensitivity, etc.) using the confusion matrix
+  # The function calculate_model_metrics is assumed to be defined elsewhere
+  metrics_dh <- calculate_model_metrics(test_conf_matrix, predictions, "DeepHit")
+  
+  # Convert the metrics into a data frame for reporting or further analysis
+  metrics_dh_dataframe <- get_dataframe("DeepHit", metrics_dh)
+  
+  # Return a list containing both the metrics data frame and the raw metrics
+  return(list(metrics_dh_dataframe = metrics_dh_dataframe, metrics_dh = metrics_dh))
+}
+```
+
+### def deephit_model.py
+
+The DeepHit model is a deep neural network designed for binary classification that incorporates both traditional categorical crossentropy and a custom ranking loss into a combined loss function It accepts an input feature vector with a dimension specified by input_dim and processes the data through two dense layers, each with 64 hidden units by default, activated by ReLU and followed by a dropout layer with a 0.2 rate to prevent overfitting The final output layer uses softmax activation to produce probabilities for the two classes The ranking loss component computes the difference between the mean predicted probabilities of the positive and negative classes, enforcing a margin of 0.1 and weighted by an alpha factor of 0.2 The model is compiled with the Adam optimizer using a learning rate of 0.001 and trained for 10 epochs with a batch size of 32, while early stopping and learning rate reduction callbacks are employed to improve training stability and performance.
+
+```{python}
+import numpy as np # For numerical operations
+import tensorflow.keras.backend as K # For backend tensor operations in TensorFlow
+from tensorflow.keras.models import Sequential # To create a sequential neural network model
+from tensorflow.keras.layers import Dense, Dropout, Input # To build layers for the network
+from tensorflow.keras.optimizers import Adam # To use the Adam optimizer during training
+from tensorflow.keras.utils import to_categorical # To convert labels into one-hot encoded format
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau # To control training with callbacks
+
+# Define A Function To Compute Ranking Loss Based On The Positive And Negative Classes
+def ranking_loss(y_true, y_pred):
+    """
+    Computes a simple ranking loss that encourages the positive class's 
+    mean predicted probability to exceed that of the negative class by a margin
+    """
+    # Extract The Predicted Probability For Class 1
+    p = y_pred[:, 1]
+    # Create A Mask For Positive Samples Where The True Label Is Class 1
+    pos_mask = K.cast(K.equal(K.argmax(y_true, axis=-1), 1), K.floatx())
+    # Create A Mask For Negative Samples As The Complement Of The Positive Mask
+    neg_mask = 1 - pos_mask
+    # Compute The Mean Predicted Probability For Positive Samples
+    pos_mean = K.sum(p * pos_mask) / (K.sum(pos_mask) + K.epsilon())
+    # Compute The Mean Predicted Probability For Negative Samples
+    neg_mean = K.sum(p * neg_mask) / (K.sum(neg_mask) + K.epsilon())
+    # Define A Fixed Margin Value
+    margin = 0.1
+    # Return The Maximum Of Zero And The Difference Between The Margin And The Difference Of Means
+    return K.maximum(0.0, margin - (pos_mean - neg_mean))
+
+# Define A Combined Loss Function That Adds Categorical Crossentropy And A Weighted Ranking Loss
+def combined_loss(y_true, y_pred):
+    """
+    Combined loss: standard categorical crossentropy plus a weighted ranking loss
+    """
+    # Compute The Standard Categorical Crossentropy Loss
+    ce = K.categorical_crossentropy(y_true, y_pred)
+    # Compute The Ranking Loss Using The Previously Defined Function
+    rl = ranking_loss(y_true, y_pred)
+    # Define A Weight For The Ranking Loss Component
+    alpha = 0.2  # Weight For The Ranking Loss
+    # Return The Sum Of The Categorical Crossentropy And The Weighted Ranking Loss
+    return ce + alpha * rl
+
+# Define A Class For The DeepHit Model Architecture And Training Procedures
+class DeephitModel:
+    # Initialize The DeepHit Model With The Provided Input Dimension And Hidden Units
+    def __init__(self, input_dim, hidden_units=64):
+        """
+        Initializes a deep neural network model for binary classification following the DeepHit approach
+        The model uses a combined loss (categorical crossentropy + ranking loss)
+        
+        Parameters:
+        - input_dim: Number of input features
+        - hidden_units: Number of neurons in hidden layers
+        """
+        # Build A Sequential Model With An Input Layer, Two Dense Layers With ReLU Activation, Dropout Layers, And
+        # An Output Layer With Softmax Activation
+        self.model = Sequential([
+            Input(shape=(input_dim,)),
+            Dense(hidden_units, activation='relu'),
+            Dropout(0.2),
+            Dense(hidden_units, activation='relu'),
+            Dropout(0.2),
+            Dense(2, activation='softmax')  # Output Layer For Binary Classification
+        ])
+        # Compile The Model Using The Adam Optimizer, Combined Loss Function, And Accuracy As A Metric
+        self.model.compile(optimizer=Adam(learning_rate=0.001),
+                           loss=combined_loss,
+                           metrics=['accuracy'])
+    
+    # Define A Method To Train The Model With Optional Validation Data
+    def fit(self, X, y, epochs=10, batch_size=32, validation_data=None):
+        """
+        Trains the DeepHit model using early stopping and learning rate reduction
+        
+        Parameters:
+        - X: Training feature matrix
+        - y: One-hot encoded labels
+        - epochs: Maximum number of training epochs
+        - batch_size: Batch size
+        - validation_data: Optional tuple (val_X, val_y) for validation
+        """
+        # Define Callbacks For Early Stopping And Learning Rate Reduction Based On Training Loss
+        callbacks = [
+            EarlyStopping(monitor='loss', patience=3, restore_best_weights=True),
+            ReduceLROnPlateau(monitor='loss', factor=0.5, patience=2, min_lr=1e-6)
+        ]
+        # Train The Model Using The Provided Data And Callbacks With Verbose Set To 0 For Silent Training
+        self.model.fit(X, y, epochs=epochs, batch_size=batch_size, verbose=0,
+                       validation_data=validation_data, callbacks=callbacks)
+    
+    # Define A Method To Predict Class Labels From Input Data
+    def predict(self, X):
+        """
+        Predicts class labels for the given input
+        
+        Parameters:
+        - X: Input feature matrix
+        
+        Returns:
+        - Predicted class labels (0 or 1)
+        """
+        # Generate Predictions Using The Model And Select The Class With The Highest Predicted Probability For
+        # Each Sample
+        preds = self.model.predict(X)
+        return np.argmax(preds, axis=1)
+
+# Define A Function To Train The DeepHit Model Using Provided Training Data
+def train_deephit(train_data):
+    """
+    Trains a DeepHit model using the provided training data
+    
+    Parameters:
+    - train_data: A dictionary with keys:
+         "X": Features
+         "y": Labels (assumed to be 0/1)
+         Optional keys "val_X" and "val_y" for validation data
+    
+    Returns:
+    - A trained DeephitModel instance
+    """
+    # Convert Training Features And Labels To Numpy Arrays
+    X = np.array(train_data["X"])
+    y = np.array(train_data["y"])
+    # Reshape X If It Is A One-Dimensional Array To Ensure It Has Two Dimensions
+    if (X.ndim == 1):
+        X = X.reshape(-1, 1)
+    # Raise An Error If The Input Data Has No Features
+    if (X.shape[1] == 0):
+        raise ValueError("Invalid input: X has no features")
+    # Determine The Number Of Input Features
+    input_dim = X.shape[1]
+    # Convert The Labels To A One-Hot Encoded Format For Binary Classification
+    y_onehot = to_categorical(y, num_classes=2)
+    
+    # Initialize The DeepHit Model With The Determined Input Dimension And A Fixed Number Of Hidden Units
+    model = DeephitModel(input_dim=input_dim, hidden_units=64)
+    
+    # Check If Validation Data Is Provided In The Training Data Dictionary
+    if ("val_X" in train_data and "val_y" in train_data):
+        # Convert Validation Features And Labels To Numpy Arrays
+        val_X = np.array(train_data["val_X"])
+        val_y = np.array(train_data["val_y"])
+        # Reshape val_X If It Is A One-Dimensional Array To Ensure It Has Two Dimensions
+        if (val_X.ndim == 1):
+            val_X = val_X.reshape(-1, 1)
+        # Convert The Validation Labels To A One-Hot Encoded Format
+        val_y_onehot = to_categorical(val_y, num_classes=2)
+        # Train The Model Using Both The Training And Validation Data
+        model.fit(X, y_onehot, epochs=10, batch_size=32, validation_data=(val_X, val_y_onehot))
+    else:
+        # Train The Model Using Only The Training Data If No Validation Data Is Provided
+        model.fit(X, y_onehot, epochs=10, batch_size=32)
+    
+    # Return The Trained DeepHit Model Instance
+    return model
+```
+
+### def transformation_surv_model
+
+The transformation_surv_model function is an R wrapper that integrates with Python to train and evaluate a transformation-based survival model It requires training and testing datasets that include an 'event' column and performs rigorous data validation and preprocessing steps such as splitting the training data into training and validation subsets, removing any 'id' columns, converting features to numeric values with missing values imputed by their median, and converting event labels to a binary format by subtracting one The function then transforms these datasets into Python-compatible objects and passes them along with model parameters including the number of epochs (default 10), network architecture defined by num_nodes (default two layers with 64 neurons each), dropout rate (default 0), batch size (default 256), and learning rate (default 0.001) to a Python training function defined in transformation_surv_model.py After model training, it predicts outcomes on the test data, evaluates performance via a confusion matrix and other metrics.
+
+```{r}
+transformation_surv_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L, 64L), dropout = 0, 
+                                      batch_size = 256L, lr = 0.001) {
+  
+  # library(reticulate) # Enables integration with Python, allowing R to call Python functions
+  # library(dplyr) # Provides functions for data manipulation and transformation
+  # Data Validation: Ensure that training and testing datasets are provided, not empty, and include the 'event'
+  # column.
+  if (is.null(train_data) || is.null(test_data)) {
+    stop("Error: train_data or test_data is NULL!")
+  }
+  if (nrow(train_data) == 0 || nrow(test_data) == 0) {
+    stop("Error: train_data or test_data is empty!")
+  }
+  if (!("event" %in% colnames(train_data)) || !("event" %in% colnames(test_data))) {
+    stop("Error: 'event' column is missing!")
+  }
+  
+  # Split the training data into training (80%) and validation (20%) subsets
+  set.seed(123) # Set seed for reproducibility
+  train_idx <- sample(seq_len(nrow(train_data)), size = 0.8 * nrow(train_data))
+  val_idx <- setdiff(seq_len(nrow(train_data)), train_idx)
+  train_subset <- train_data[train_idx, ]
+  val_subset <- train_data[val_idx, ]
+  
+  # Preprocess: Remove the "id" column from training, validation, and testing datasets if present
+  if ("id" %in% names(train_subset)) {
+    train_subset <- train_subset %>% select(-id)
+  }
+  if ("id" %in% names(val_subset)) {
+    val_subset <- val_subset %>% select(-id)
+  }
+  if ("id" %in% names(test_data)) {
+    test_data <- test_data %>% select(-id)
+  }
+  
+  # Feature and Label Extraction:
+  # Separate features and labels for training, validation, and test datasets
+  X_train <- train_subset %>% select(-event)
+  y_train <- train_subset$event
+  X_val <- val_subset %>% select(-event)
+  y_val <- val_subset$event
+  X_test <- test_data %>% select(-event)
+  y_test <- test_data$event
+  
+  # Define a helper function to convert features to numeric and handle missing values
+  convert_to_numeric <- function(x) {
+    if (is.numeric(x)) {
+      res <- x
+    } else if (is.factor(x)) {
+      res <- suppressWarnings(as.numeric(as.character(x)))
+    } else if (is.character(x)) {
+      res <- suppressWarnings(as.numeric(x))
+    } else {
+      res <- suppressWarnings(as.numeric(x))
+    }
+    if (any(is.na(res))) {
+      med <- median(res, na.rm = TRUE)
+      if (is.na(med)) med <- 0 # Default to 0 if median cannot be computed
+      res[is.na(res)] <- med
+    }
+    return(res)
+  }
+  
+  # Convert all feature columns in training, validation, and test sets to numeric
+  X_train <- X_train %>% mutate(across(everything(), convert_to_numeric))
+  X_val <- X_val %>% mutate(across(everything(), convert_to_numeric))
+  X_test <- X_test %>% mutate(across(everything(), convert_to_numeric))
+  
+  # Convert the data frames of features to matrices
+  X_train <- as.matrix(X_train)
+  X_val <- as.matrix(X_val)
+  X_test <- as.matrix(X_test)
+  
+  # Convert labels to binary numeric values (0/1)
+  y_train <- as.numeric(y_train) - 1
+  y_val <- as.numeric(y_val) - 1
+  y_test <- as.numeric(y_test) - 1
+  
+  # Prepare Data for Python:
+  # Create a list containing the training features, labels, validation data, and model parameters, then convert it
+  # to a Python object.
+  train_data_py <- r_to_py(list(
+    X = X_train,
+    y = y_train,
+    val_X = X_val,
+    val_y = y_val,
+    epochs = as.integer(epochs),
+    num_nodes = num_nodes,
+    dropout = dropout,
+    batch_size = as.integer(batch_size),
+    lr = lr
+  ))
+  
+  # Prepare the test data in a similar fashion
+  test_data_py <- r_to_py(list(
+    X = X_test,
+    y = y_test
+  ))
+  
+  # Load the Python script that implements the Transformation Survival model
+  source_python("transformation_surv_model.py")
+  
+  # Train the Transformation Survival model using the provided training data
+  trans_model <- train_transformation_surv(train_data_py)
+  
+  # Use the trained model to predict outcomes on the test dataset
+  predictions <- trans_model$predict(test_data_py[["X"]])
+  
+  # Convert predictions from Python format back to R
+  predictions <- py_to_r(predictions)
+  
+  # Create a confusion matrix comparing predicted outcomes with the actual test labels
+  test_conf_matrix <- table(
+    Predicted = factor(predictions, levels = c(0, 1)),
+    Actual = factor(y_test, levels = c(0, 1))
+  )
+  
+  # Calculate performance metrics using the confusion matrix
+  # This function (calculate_model_metrics) is assumed to be defined elsewhere
+  metrics_tfs <- calculate_model_metrics(test_conf_matrix, predictions, "TransformationSurv")
+  
+  # Convert the metrics into a data frame for easy viewing and further analysis
+  metrics_tfs_dataframe <- get_dataframe("TransformationSurv", metrics_tfs)
+  
+  # Return a list containing both the metrics data frame and the raw metrics
+  return(list(metrics_tfs_dataframe = metrics_tfs_dataframe, metrics_tfs = metrics_tfs))
+}
+```
+
+### transformation_surv_model.py
+
+The TransformationSurvModel is a deep neural network designed for binary classification using the Transformation-Surv approach It accepts an input feature vector defined by input_dim and processes it through two dense layers with configurable hidden_units (default is 64) using ReLU activation It incorporates dropout with a rate of 0.3 to prevent overfitting and then applies a custom Lambda transformation layer that performs a logarithmic transformation (K.log(1+x)) to simulate risk transformation The final dense layer with softmax activation outputs probabilities for two classes The model is compiled with the Adam optimizer set at a learning rate of 0.001 using categorical crossentropy loss and monitors accuracy during training Training is further enhanced with early stopping and learning rate reduction callbacks to ensure robust convergence.
+
+```{python}
+import numpy as np # Import Numpy For Numerical Operations
+import tensorflow.keras.backend as K # Import Keras Backend For Tensor Operations
+from tensorflow.keras.models import Sequential # Import Sequential Model Constructor
+from tensorflow.keras.layers import Dense, Dropout, Input, Lambda # Import Required Layers For Building The Model
+from tensorflow.keras.optimizers import Adam # Import Adam Optimizer For Model Training
+from tensorflow.keras.utils import to_categorical # Import Utility To Convert Labels To One-Hot Encoding
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau # Import Callbacks For Training Control
+
+# Define A Transformation Layer Function That Applies A Logarithmic Transformation To The Input
+def transformation_layer(x):
+    """
+    Applies a logarithmic transformation to simulate the transformation of the risk function
+    """
+    return K.log(1 + x) # Return The Logarithm Of One Plus The Input
+
+# Define A Class For The Transformation-Surv Model Architecture And Training Procedures
+class TransformationSurvModel:
+    # Initialize The Model With Input Dimension And Number Of Hidden Units
+    def __init__(self, input_dim, hidden_units=64):
+        """
+        Initializes a deep neural network model for binary classification using the Transformation-Surv approach
+        This model includes a transformation layer to simulate risk transformation
+        
+        Parameters:
+        - input_dim: Number of input features
+        - hidden_units: Number of neurons in hidden layers
+        """
+        # Build A Sequential Model With An Input Layer, Dense Layers, Dropout For Regularization, A Transformation
+        # Lambda Layer, And An Output Layer
+        self.model = Sequential([
+            Input(shape=(input_dim,)),  # Define The Input Layer With The Specified Input Dimension
+            Dense(hidden_units, activation='relu'),  # Add A Dense Layer With ReLU Activation
+            Dropout(0.3),  # Apply Dropout For Regularization With A Dropout Rate Of 0.3
+            Dense(hidden_units, activation='relu'),  # Add A Second Dense Layer With ReLU Activation
+            Lambda(transformation_layer),  # Apply The Custom Transformation Layer To Simulate Risk Transformation
+            Dense(2, activation='softmax')  # Add An Output Layer For Binary Classification With Softmax
+        ])
+        # Compile The Model With Adam Optimizer, Categorical Crossentropy Loss, And Accuracy Metric
+        self.model.compile(optimizer=Adam(learning_rate=0.001),
+                           loss='categorical_crossentropy',
+                           metrics=['accuracy'])
+    
+    # Define A Method To Train The Model Using Provided Data And Callbacks For Early Stopping And Learning Rate
+    # Reduction
+    def fit(self, X, y, epochs=10, batch_size=32, validation_data=None):
+        """
+        Trains the Transformation-Surv model using early stopping and learning rate reduction
+        
+        Parameters:
+        - X: Training feature matrix
+        - y: One-hot encoded labels
+        - epochs: Maximum number of epochs
+        - batch_size: Batch size
+        - validation_data: Optional tuple (val_X, val_y) for validation
+        """
+        # Define Callbacks To Monitor Loss And Adjust Training Accordingly
+        callbacks = [
+            EarlyStopping(monitor='loss', patience=3, restore_best_weights=True), # Stop Training Early If Loss Does Not Improve For 3 Epochs
+            ReduceLROnPlateau(monitor='loss', factor=0.5, patience=2, min_lr=1e-6) # Reduce Learning Rate If Loss Plateau Is Detected
+        ]
+        # Fit The Model On The Training Data With The Specified Number Of Epochs, Batch Size, And Callbacks
+        self.model.fit(X, y, epochs=epochs, batch_size=batch_size, verbose=0,
+                       validation_data=validation_data, callbacks=callbacks)
+    
+    # Define A Method To Predict Class Labels From Input Data
+    def predict(self, X):
+        """
+        Predicts class labels for the given input
+        
+        Parameters:
+        - X: Input feature matrix
+        
+        Returns:
+        - Predicted class labels (0 or 1)
+        """
+        # Generate Predictions Using The Model And Select The Class With The Highest Probability For Each Sample
+        preds = self.model.predict(X)
+        return np.argmax(preds, axis=1)
+
+# Define A Function To Train A Transformation-Surv Model Using Provided Training Data
+def train_transformation_surv(train_data):
+    """
+    Trains a Transformation-Surv model using the provided training data
+    
+    Parameters:
+    - train_data: A dictionary with keys:
+         "X": Features
+         "y": Labels (assumed to be 0/1)
+         Optional keys "val_X" and "val_y" for validation data
+    
+    Returns:
+    - A trained TransformationSurvModel instance
+    """
+    # Convert The Training Features And Labels To Numpy Arrays
+    X = np.array(train_data["X"])
+    y = np.array(train_data["y"])
+    # Reshape X To Two Dimensions If It Is A One-Dimensional Array
+    if (X.ndim == 1):
+        X = X.reshape(-1, 1)
+    # Raise An Error If There Are No Features In X
+    if (X.shape[1] == 0):
+        raise ValueError("Invalid input: X has no features")
+    # Determine The Number Of Input Features From The Shape Of X
+    input_dim = X.shape[1]
+    # Convert The Labels To A One-Hot Encoded Format For Binary Classification
+    y_onehot = to_categorical(y, num_classes=2)
+    
+    # Initialize The TransformationSurvModel With The Determined Input Dimension And Fixed Number Of Hidden Units
+    model = TransformationSurvModel(input_dim=input_dim, hidden_units=64)
+    
+    # Check If Validation Data Is Provided In The Training Data Dictionary
+    if ("val_X" in train_data and "val_y" in train_data):
+        # Convert Validation Features And Labels To Numpy Arrays
+        val_X = np.array(train_data["val_X"])
+        val_y = np.array(train_data["val_y"])
+        # Reshape Validation Features To Two Dimensions If Necessary
+        if (val_X.ndim == 1):
+            val_X = val_X.reshape(-1, 1)
+        # Convert The Validation Labels To A One-Hot Encoded Format
+        val_y_onehot = to_categorical(val_y, num_classes=2)
+        # Fit The Model Using Both Training And Validation Data
+        model.fit(X, y_onehot, epochs=10, batch_size=32, validation_data=(val_X, val_y_onehot))
+    else:
+        # Fit The Model Using Only The Training Data If Validation Data Is Not Provided
+        model.fit(X, y_onehot, epochs=10, batch_size=32)
+    
+    # Return The Trained TransformationSurvModel Instance
+    return model
 ```

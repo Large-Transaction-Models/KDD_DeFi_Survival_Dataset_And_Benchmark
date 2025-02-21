@@ -1,5 +1,5 @@
 ---
-title: "DMLR DeFi Survival Data Pipeline Example"
+title: "DeFi Survival Data Pipeline Example"
 author: "Hanzhen Qin(qinh2)"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
@@ -30,7 +30,7 @@ required_packages <- c(
   "rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
   "caret", "survival", "survminer", "ggplot2", 
   "kableExtra", "rpart", "glmnet", "data.table", "reshape2", "pROC", 
-  "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "parallel"
+  "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "parallel", "reticulate"
 )
 
 # Loop through the package list and install missing packages
@@ -57,13 +57,11 @@ group_by <- dplyr::group_by
 
 # Survival Data Pipeline
 
-* Project name: DMLR DeFi-LTM
-
 ```{r}
-source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/source/survivalData_pipeline/data_preprocessing.R")
-source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/source/survivalData_pipeline/model_evaluation_visual.R")
-source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/source/survivalData_pipeline/classification_models.R")
-source("~/DMLR_DeFi_Survival_Dataset_And_Benchmark/source/survivalData_pipeline/get_classification_cutoff.R")
+source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/data_preprocessing.R")
+source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/model_evaluation_visual.R")
+source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/classification_models.R")
+source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/get_classification_cutoff.R")
 ```
 
 ```{r}

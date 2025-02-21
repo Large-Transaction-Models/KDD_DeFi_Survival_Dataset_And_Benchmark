@@ -1,5 +1,5 @@
 ---
-title: "DMLR DeFi Survival Data Pipeline Final"
+title: "DeFi Survival Data Pipeline Final"
 author: "Hanzhen Qin - qinh2"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
@@ -34,7 +34,7 @@ required_packages <- c(
   "rmarkdown", "tidyverse", "stringr", "ggbiplot", "pheatmap", 
   "caret", "survival", "survminer", "ggplot2", 
   "kableExtra", "rpart", "glmnet", "data.table", "reshape2", "pROC", 
-  "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "parallel"
+  "pander", "readr", "dplyr", "e1071", "ROSE", "xgboost", "parallel", "reticulate"
 )
 
 # Loop through the package list and install missing packages
@@ -91,37 +91,37 @@ train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_BAL <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -133,7 +133,7 @@ metrics_list_BAL <- list(
 accuracy_comparison_plot(metrics_list_BAL)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_BAL <- paste(indexEvent, "+", outcomeEvent)
@@ -153,15 +153,7 @@ outcomeEvent = "deposit"
 
 # load the corresponding train and test data
 get_train_test_data(indexEvent, outcomeEvent)
-
-# If you want to check the train and test data, you can run the following codes.
-# cat("Train data:\n")
-# summary(train)
-# cat("Test data:\n")
-# summary(test)
 ```
-
-Using the `get_classification_cutoff` funtion to get the optimal timeDiff, then we will call the `data_processing` function above to get all the training data and test data.
 
 ```{r}
 classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
@@ -174,20 +166,14 @@ test_data = data_processing(test, classification_cutoff)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-If the ratio of "No" labels to "Yes" labels in the dataset is significantly imbalanced, we can utilize the `smote_data` function to generate a new, more balanced dataset. This balanced dataset ensures that both classes are better represented, helping to mitigate the bias introduced by class imbalance and ultimately improving the accuracy and reliability of our classification model.
-
 ```{r}
 train_data <- smote_data(train_data)
 ```
-
-Then you can check the updated balanced version of train data.
 
 ```{r}
 # If you want to watch the percentages between "Yes" and "No" label, run this code.
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
-
-After obtaining the train and test data, we will apply all the classification models to evaluate the relationship between these events.
 
 ```{r}
 lr_return = logistic_regression(train_data, test_data)
@@ -262,37 +248,37 @@ test_data = data_processing(test, classification_cutoff)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_BR <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -304,7 +290,7 @@ metrics_list_BR <- list(
 accuracy_comparison_plot(metrics_list_BR)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_BR <- paste(indexEvent, "+", outcomeEvent)
@@ -340,37 +326,37 @@ train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_BW <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -382,7 +368,7 @@ metrics_list_BW <- list(
 accuracy_comparison_plot(metrics_list_BW)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_BW <- paste(indexEvent, "+", outcomeEvent)
@@ -418,37 +404,37 @@ train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_DAL <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -460,7 +446,7 @@ metrics_list_DAL <- list(
 accuracy_comparison_plot(metrics_list_DAL)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_DAL <- paste(indexEvent, "+", outcomeEvent)
@@ -496,37 +482,37 @@ train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_DB <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -538,7 +524,7 @@ metrics_list_DB <- list(
 accuracy_comparison_plot(metrics_list_DB)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_DB <- paste(indexEvent, "+", outcomeEvent)
@@ -574,37 +560,37 @@ train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_DR <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -616,7 +602,7 @@ metrics_list_DR <- list(
 accuracy_comparison_plot(metrics_list_DR)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_DR <- paste(indexEvent, "+", outcomeEvent)
@@ -647,37 +633,37 @@ test_data = data_processing(test, classification_cutoff)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_DW <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -689,7 +675,7 @@ metrics_list_DW <- list(
 accuracy_comparison_plot(metrics_list_DW)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_DW <- paste(indexEvent, "+", outcomeEvent)
@@ -725,37 +711,37 @@ train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_RAL <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -767,7 +753,7 @@ metrics_list_RAL <- list(
 accuracy_comparison_plot(metrics_list_RAL)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_RAL <- paste(indexEvent, "+", outcomeEvent)
@@ -798,37 +784,37 @@ test_data = data_processing(test, classification_cutoff)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_RB <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -840,7 +826,7 @@ metrics_list_RB <- list(
 accuracy_comparison_plot(metrics_list_RB)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_RB <- paste(indexEvent, "+", outcomeEvent)
@@ -876,37 +862,37 @@ train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_RD <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -918,7 +904,7 @@ metrics_list_RD <- list(
 accuracy_comparison_plot(metrics_list_RD)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_RD <- paste(indexEvent, "+", outcomeEvent)
@@ -954,37 +940,37 @@ train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_RW <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -996,7 +982,7 @@ metrics_list_RW <- list(
 accuracy_comparison_plot(metrics_list_RW)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_RW <- paste(indexEvent, "+", outcomeEvent)
@@ -1032,37 +1018,37 @@ train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_WAL <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -1074,7 +1060,7 @@ metrics_list_WAL <- list(
 accuracy_comparison_plot(metrics_list_WAL)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_WAL <- paste(indexEvent, "+", outcomeEvent)
@@ -1110,37 +1096,37 @@ train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_WB <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -1152,7 +1138,7 @@ metrics_list_WB <- list(
 accuracy_comparison_plot(metrics_list_WB)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_WB <- paste(indexEvent, "+", outcomeEvent)
@@ -1188,37 +1174,37 @@ train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_WR <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -1230,7 +1216,7 @@ metrics_list_WR <- list(
 accuracy_comparison_plot(metrics_list_WR)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_WR <- paste(indexEvent, "+", outcomeEvent)
@@ -1261,37 +1247,37 @@ test_data = data_processing(test, classification_cutoff)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-```{r, include=FALSE}
+```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
 ```
 
-```{r, include=FALSE}
+```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
-```{r, include=FALSE}
+```{r}
 nb_return = naive_bayes(train_data, test_data)
 accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
 accuracy_nb = nb_return$metrics_nb
 ```
 
-```{r, include=FALSE}
+```{r}
 xgb_return = XG_Boost(train_data, test_data)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
 
-```{r, include=FALSE}
+```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
 ```
 
-```{r, include=FALSE}
+```{r}
 # compare all the classification models
 metrics_list_WD <- list(
   list(accuracy_lr, "Logistic Regression"), 
@@ -1303,7 +1289,7 @@ metrics_list_WD <- list(
 accuracy_comparison_plot(metrics_list_WD)
 ```
 
-```{r, include=FALSE}
+```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_WD <- paste(indexEvent, "+", outcomeEvent)

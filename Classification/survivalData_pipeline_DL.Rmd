@@ -1,5 +1,5 @@
 ---
-title: "DMLR DeFi Survival Data Pipeline - Deep learning"
+title: "DeFi Survival Data Pipeline - Deep Learning"
 author: "Hanzhen Qin - qinh2"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
@@ -15,7 +15,7 @@ output:
     theme: united
 ---
 
-```{r, include=FALSE}
+```{r}
 # Check and install required R packages
 if (!require("conflicted")) {
   install.packages("conflicted", dependencies = TRUE)
@@ -64,27 +64,22 @@ group_by <- dplyr::group_by
 ```{r}
 source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/data_preprocessing.R")
 source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/model_evaluation_visual.R")
-source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/classification_models.R")
-source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/get_classification_cutoff.R")
 source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/deep_learning_models.R")
+source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/get_classification_cutoff.R")
 ```
 
 ```{r}
 # set the indexEvent and outcomeEvent
 indexEvent = "borrow"
-outcomeEvent = "deposit"
+outcomeEvent = "account liquidated"
 
 # load the corresponding train and test data
 get_train_test_data(indexEvent, outcomeEvent)
 
-# If you want to check the train and test data, you can run the following codes.
-# cat("Train data:\n")
-# summary(train)
-# cat("Test data:\n")
-# summary(test)
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
 ```
-
-Using the `get_classification_cutoff` funtion to get the optimal timeDiff, then we will call the `data_processing` function above to get all the training data and test data.
 
 ```{r}
 classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
@@ -97,48 +92,692 @@ test_data = data_processing(test, classification_cutoff)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-If the ratio of "No" labels to "Yes" labels in the dataset is significantly imbalanced, we can utilize the `smote_data` function to generate a new, more balanced dataset. This balanced dataset ensures that both classes are better represented, helping to mitigate the bias introduced by class imbalance and ultimately improving the accuracy and reliability of our classification model.
-
 ```{r}
 train_data <- smote_data(train_data)
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-Then you can check the updated balanced version of train data.
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BAL <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BAL <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_BAL <- combine_classification_results(accuracy_dataframe_list_BAL, data_name_BAL)
+
+# display the combined dataframe
+pander(combined_results_BAL, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "deposit"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+```
+
+```{r}
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
 
 ```{r}
 # If you want to watch the percentages between "Yes" and "No" label, run this code.
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
-After obtaining the train and test data, we will apply all the classification models to evaluate the relationship between these events.
+```{r}
+train_data <- smote_data(train_data)
+```
 
 ```{r}
-dh_return = deephit(train_data, test_data)
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
 accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
 ```
 
 ```{r}
-# ts_return = transformer_survival(train_data, test_data)
-# accuracy_ts_dataframe = ts_return$metrics_ts_dataframe
-# accuracy_ts = ts_return$metrics_ts
-```
-
-```{r}
-# compare all the classification models
-metrics_list_BD <- list(
-  list(accuracy_dh, "DeepHit")
-)
-accuracy_comparison_plot(metrics_list_BD)
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
 ```
 
 ```{r}
 # Show the final dataframe for all classification models,
 # including the classification model name, accuracy, data combination name.
 data_name_BD <- paste(indexEvent, "+", outcomeEvent)
-accuracy_dataframe_list_BD <- list(accuracy_dh_dataframe)
+accuracy_dataframe_list_BD <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
 combined_results_BD <- combine_classification_results(accuracy_dataframe_list_BD, data_name_BD)
 
 # display the combined dataframe
 pander(combined_results_BD, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "repay"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BR <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BR <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_BR <- combine_classification_results(accuracy_dataframe_list_BR, data_name_BR)
+
+# display the combined dataframe
+pander(combined_results_BR, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "borrow"
+outcomeEvent = "withdraw"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_BW <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_BW <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_BW <- combine_classification_results(accuracy_dataframe_list_BW, data_name_BW)
+
+# display the combined dataframe
+pander(combined_results_BW, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "deposit"
+outcomeEvent = "account liquidated"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_DAL <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_DAL <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_DAL <- combine_classification_results(accuracy_dataframe_list_DAL, data_name_DAL)
+
+# display the combined dataframe
+pander(combined_results_DAL, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "deposit"
+outcomeEvent = "borrow"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_DB <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_DB <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_DB <- combine_classification_results(accuracy_dataframe_list_DB, data_name_DB)
+
+# display the combined dataframe
+pander(combined_results_DB, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "deposit"
+outcomeEvent = "repay"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_DR <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_DR <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_DR <- combine_classification_results(accuracy_dataframe_list_DR, data_name_DR)
+
+# display the combined dataframe
+pander(combined_results_DR, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "deposit"
+outcomeEvent = "withdraw"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_DW <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_DW <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_DW <- combine_classification_results(accuracy_dataframe_list_DW, data_name_DW)
+
+# display the combined dataframe
+pander(combined_results_DW, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "repay"
+outcomeEvent = "account liquidated"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_RAL <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_RAL <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_RAL <- combine_classification_results(accuracy_dataframe_list_RAL, data_name_RAL)
+
+# display the combined dataframe
+pander(combined_results_RAL, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "repay"
+outcomeEvent = "borrow"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_RB <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_RB <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_RB <- combine_classification_results(accuracy_dataframe_list_RB, data_name_RB)
+
+# display the combined dataframe
+pander(combined_results_RB, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "repay"
+outcomeEvent = "deposit"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_RD <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_RD <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_RD <- combine_classification_results(accuracy_dataframe_list_RD, data_name_RD)
+
+# display the combined dataframe
+pander(combined_results_RD, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "repay"
+outcomeEvent = "withdraw"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_RW <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_RW <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_RW <- combine_classification_results(accuracy_dataframe_list_RW, data_name_RW)
+
+# display the combined dataframe
+pander(combined_results_RW, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "withdraw"
+outcomeEvent = "account liquidated"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_WAL <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_WAL <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_WAL <- combine_classification_results(accuracy_dataframe_list_WAL, data_name_WAL)
+
+# display the combined dataframe
+pander(combined_results_WAL, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "withdraw"
+outcomeEvent = "borrow"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_WB <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_WB <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_WB <- combine_classification_results(accuracy_dataframe_list_WB, data_name_WB)
+
+# display the combined dataframe
+pander(combined_results_WB, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "withdraw"
+outcomeEvent = "repay"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+train_data <- smote_data(train_data)
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_WR <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_WR <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_WR <- combine_classification_results(accuracy_dataframe_list_WR, data_name_WR)
+
+# display the combined dataframe
+pander(combined_results_WR, caption = "Classification Model Performance")
+```
+
+```{r}
+# set the indexEvent and outcomeEvent
+indexEvent = "withdraw"
+outcomeEvent = "deposit"
+
+# load the corresponding train and test data
+get_train_test_data(indexEvent, outcomeEvent)
+
+classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
+train_data = data_processing(train, classification_cutoff)
+test_data = data_processing(test, classification_cutoff)
+```
+
+```{r}
+# If you want to watch the percentages between "Yes" and "No" label, run this code.
+get_percentage(train_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+```
+
+```{r}
+# Show the final dataframe for all classification models,
+# including the classification model name, accuracy, data combination name.
+data_name_WD <- paste(indexEvent, "+", outcomeEvent)
+accuracy_dataframe_list_WD <- list(accuracy_dh_dataframe, accuracy_tfs_dataframe)
+combined_results_WD <- combine_classification_results(accuracy_dataframe_list_WD, data_name_WD)
+
+# display the combined dataframe
+pander(combined_results_WD, caption = "Classification Model Performance")
+```
+
+## Classification Model Performance For All Data Combinations
+
+After we run all the data combinations, we can use the `combine_accuracy_dataframes` to combine all the classification models' performance into one dataframe.
+
+```{r}
+combined_classification_results <- combine_accuracy_dataframes(
+  list(combined_results_BAL, combined_results_BD, combined_results_BR, combined_results_BW, 
+       combined_results_DAL, combined_results_DB, combined_results_DR, combined_results_DW, 
+       combined_results_RAL, combined_results_RB, combined_results_RD, combined_results_RW, 
+       combined_results_WAL, combined_results_WB, combined_results_WR, combined_results_WD))
+pander(combined_classification_results, caption = "Classification Model Performance for all data")
+```
+
+```{r}
+fwrite(combined_classification_results, file = "deep_learning_classification_results.csv")
 ```

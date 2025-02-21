@@ -1,0 +1,33 @@
+Model,Balanced_Accuracy,F1_Score,Data_Combination
+DeepHit,50.73%,4.22%,borrow + account liquidated
+TransformationSurv,50.00%,50.00%,borrow + account liquidated
+DeepHit,50.00%,50.00%,borrow + deposit
+TransformationSurv,50.00%,50.00%,borrow + deposit
+DeepHit,50.00%,50.00%,borrow + repay
+TransformationSurv,63.76%,47.66%,borrow + repay
+DeepHit,56.91%,24.27%,borrow + withdraw
+TransformationSurv,17.18%,23.23%,borrow + withdraw
+DeepHit,50.05%,0.21%,deposit + account liquidated
+TransformationSurv,50.05%,0.21%,deposit + account liquidated
+DeepHit,50.66%,29.21%,deposit + borrow
+TransformationSurv,58.55%,29.21%,deposit + borrow
+DeepHit,58.57%,29.27%,deposit + repay
+TransformationSurv,58.57%,29.27%,deposit + repay
+DeepHit,78.94%,40.31%,deposit + withdraw
+TransformationSurv,81.93%,32.16%,deposit + withdraw
+DeepHit,49.77%,0.05%,repay + account liquidated
+TransformationSurv,49.77%,0.46%,repay + account liquidated
+DeepHit,50.00%,50.00%,repay + borrow
+TransformationSurv,77.54%,10.50%,repay + borrow
+DeepHit,65.72%,49.81%,repay + deposit
+TransformationSurv,50.00%,32.78%,repay + deposit
+DeepHit,50.00%,50.00%,repay + withdraw
+TransformationSurv,27.06%,29.50%,repay + withdraw
+DeepHit,50.03%,0.14%,withdraw + account liquidated
+TransformationSurv,50.04%,0.15%,withdraw + account liquidated
+DeepHit,49.92%,24.46%,withdraw + borrow
+TransformationSurv,57.18%,25.12%,withdraw + borrow
+DeepHit,57.59%,26.35%,withdraw + repay
+TransformationSurv,57.69%,26.67%,withdraw + repay
+DeepHit,50.00%,50.00%,withdraw + deposit
+TransformationSurv,79.60%,44.44%,withdraw + deposit
