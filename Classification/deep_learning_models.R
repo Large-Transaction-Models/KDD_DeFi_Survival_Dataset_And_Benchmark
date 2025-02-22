@@ -3,8 +3,7 @@ library(dplyr) # Provides functions for data manipulation and transformation
 
 # Function to train a DeepHit model using the given training and test datasets
 deephit_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L, 64L), 
-                          dropout = 0, batch_size = 256L, lr = 0.001,
-                          class_weight = NULL) {
+                          dropout = 0, batch_size = 256L, lr = 0.001, class_weight = NULL) {
   
   # library(reticulate) # Enables integration with Python, allowing R to call Python functions
   # library(dplyr) # Provides functions for data manipulation and transformation
@@ -54,11 +53,14 @@ deephit_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L,
   convert_to_numeric <- function(x) {
     if (is.numeric(x)) {
       res <- x
-    } else if (is.factor(x)) {
+    } 
+    else if (is.factor(x)) {
       res <- suppressWarnings(as.numeric(as.character(x)))
-    } else if (is.character(x)) {
+    } 
+    else if (is.character(x)) {
       res <- suppressWarnings(as.numeric(x))
-    } else {
+    } 
+    else {
       res <- suppressWarnings(as.numeric(x))
     }
     if (any(is.na(res))) {
@@ -142,9 +144,8 @@ deephit_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L,
 }
 
 # Function to train a Transformation Survival model using the given training and test datasets
-transformation_surv_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L, 64L), dropout = 0, 
-                                      batch_size = 256L, lr = 0.001,
-                                      class_weight = NULL) {
+transformation_surv_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L, 64L), 
+                                      dropout = 0, batch_size = 256L, lr = 0.001, class_weight = NULL) {
   
   # library(reticulate) # Enables integration with Python, allowing R to call Python functions
   # library(dplyr) # Provides functions for data manipulation and transformation

@@ -1,7 +1,7 @@
 import numpy as np # For numerical operations
 import tensorflow.keras.backend as K # For backend tensor operations in TensorFlow
 from tensorflow.keras.models import Sequential # To create a sequential neural network model
-from tensorflow.keras.layers import Dense, Dropout, Input, BatchNormalization  # *** New comment: Added BatchNormalization for training stability
+from tensorflow.keras.layers import Dense, Dropout, Input, BatchNormalization  # Added BatchNormalization for training stability
 from tensorflow.keras.optimizers import Adam # To use the Adam optimizer during training
 from tensorflow.keras.utils import to_categorical # To convert labels into one-hot encoded format
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau # To control training with callbacks
