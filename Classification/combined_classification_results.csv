@@ -4,78 +4,110 @@ Decision Tree,50.74%,3.06%,borrow + account liquidated
 Naive Bayes,50.68%,3.08%,borrow + account liquidated
 XGBoost,49.35%,99.03%,borrow + account liquidated
 Elastic Net,50.44%,3.52%,borrow + account liquidated
+DeepHit,50.75%,2.96%,borrow + account liquidated
+TransformationSurv,50.75%,2.97%,borrow + account liquidated
 Logistic Regression,62.93%,46.12%,borrow + deposit
 Decision Tree,63.74%,11.70%,borrow + deposit
 Naive Bayes,66.04%,45.49%,borrow + deposit
 XGBoost,64.53%,89.90%,borrow + deposit
 Elastic Net,62.93%,46.11%,borrow + deposit
+DeepHit,39.97%,28.94%,borrow + deposit
+TransformationSurv,36.21%,27.38%,borrow + deposit
 Logistic Regression,68.71%,65.50%,borrow + repay
 Decision Tree,70.90%,67.73%,borrow + repay
 Naive Bayes,71.85%,46.62%,borrow + repay
 XGBoost,67.48%,72.48%,borrow + repay
 Elastic Net,66.87%,64.48%,borrow + repay
+DeepHit,62.88%,57.73%,borrow + repay
+TransformationSurv,61.35%,55.74%,borrow + repay
 Logistic Regression,61.39%,40.81%,borrow + withdraw
 Decision Tree,63.60%,10.97%,borrow + withdraw
 Naive Bayes,66.13%,45.23%,borrow + withdraw
 XGBoost,54.73%,92.41%,borrow + withdraw
 Elastic Net,61.40%,40.82%,borrow + withdraw
+DeepHit,71.11%,46.61%,borrow + withdraw
+TransformationSurv,65.79%,42.21%,borrow + withdraw
 Logistic Regression,50.11%,0.52%,deposit + account liquidated
 Decision Tree,50.09%,0.45%,deposit + account liquidated
 Naive Bayes,50.06%,0.28%,deposit + account liquidated
 XGBoost,50.00%,99.95%,deposit + account liquidated
 Elastic Net,50.11%,0.52%,deposit + account liquidated
+DeepHit,50.05%,0.21%,deposit + account liquidated
+TransformationSurv,50.05%,0.21%,deposit + account liquidated
 Logistic Regression,61.80%,42.45%,deposit + borrow
 Decision Tree,58.55%,29.21%,deposit + borrow
 Naive Bayes,52.11%,29.41%,deposit + borrow
 XGBoost,50.00%,90.65%,deposit + borrow
 Elastic Net,61.80%,42.45%,deposit + borrow
+DeepHit,58.55%,29.21%,deposit + borrow
+TransformationSurv,58.55%,29.21%,deposit + borrow
 Logistic Regression,62.12%,43.69%,deposit + repay
 Decision Tree,58.57%,29.27%,deposit + repay
 Naive Bayes,48.00%,26.20%,deposit + repay
 XGBoost,50.00%,90.62%,deposit + repay
 Elastic Net,62.13%,43.72%,deposit + repay
+DeepHit,58.57%,29.27%,deposit + repay
+TransformationSurv,58.57%,29.27%,deposit + repay
 Logistic Regression,76.86%,63.86%,deposit + withdraw
 Decision Tree,78.38%,67.77%,deposit + withdraw
 Naive Bayes,72.01%,38.62%,deposit + withdraw
 XGBoost,77.62%,83.85%,deposit + withdraw
 Elastic Net,75.95%,63.10%,deposit + withdraw
+DeepHit,72.31%,45.07%,deposit + withdraw
+TransformationSurv,62.83%,45.92%,deposit + withdraw
 Logistic Regression,50.12%,1.20%,repay + account liquidated
 Decision Tree,51.10%,4.00%,repay + account liquidated
 Naive Bayes,50.05%,1.02%,repay + account liquidated
 XGBoost,50.24%,38.45%,repay + account liquidated
 Elastic Net,50.12%,1.20%,repay + account liquidated
+DeepHit,50.28%,1.14%,repay + account liquidated
+TransformationSurv,50.27%,1.14%,repay + account liquidated
 Logistic Regression,70.62%,57.78%,repay + borrow
 Decision Tree,77.91%,67.08%,repay + borrow
 Naive Bayes,68.47%,46.43%,repay + borrow
 XGBoost,76.83%,83.54%,repay + borrow
 Elastic Net,72.27%,59.29%,repay + borrow
+DeepHit,71.57%,47.34%,repay + borrow
+TransformationSurv,55.58%,31.42%,repay + borrow
 Logistic Regression,63.63%,47.89%,repay + deposit
 Decision Tree,61.67%,43.18%,repay + deposit
 Naive Bayes,67.41%,50.56%,repay + deposit
 XGBoost,75.69%,89.66%,repay + deposit
 Elastic Net,63.64%,47.90%,repay + deposit
+DeepHit,57.16%,38.29%,repay + deposit
+TransformationSurv,60.66%,41.22%,repay + deposit
 Logistic Regression,62.06%,44.54%,repay + withdraw
 Decision Tree,58.52%,9.09%,repay + withdraw
 Naive Bayes,68.41%,51.11%,repay + withdraw
 XGBoost,42.72%,90.33%,repay + withdraw
 Elastic Net,62.07%,44.55%,repay + withdraw
+DeepHit,69.14%,42.71%,repay + withdraw
+TransformationSurv,70.09%,46.43%,repay + withdraw
 Logistic Regression,50.07%,0.31%,withdraw + account liquidated
 Decision Tree,50.06%,0.23%,withdraw + account liquidated
 Naive Bayes,50.06%,0.23%,withdraw + account liquidated
 XGBoost,49.97%,99.96%,withdraw + account liquidated
 Elastic Net,50.07%,0.31%,withdraw + account liquidated
+DeepHit,50.04%,0.17%,withdraw + account liquidated
+TransformationSurv,50.05%,0.19%,withdraw + account liquidated
 Logistic Regression,62.42%,41.44%,withdraw + borrow
 Decision Tree,49.13%,21.78%,withdraw + borrow
 Naive Bayes,59.34%,36.29%,withdraw + borrow
 XGBoost,88.93%,92.48%,withdraw + borrow
 Elastic Net,62.42%,41.44%,withdraw + borrow
+DeepHit,55.82%,25.37%,withdraw + borrow
+TransformationSurv,53.67%,25.08%,withdraw + borrow
 Logistic Regression,61.92%,41.38%,withdraw + repay
 Decision Tree,49.97%,24.18%,withdraw + repay
 Naive Bayes,66.75%,47.08%,withdraw + repay
 XGBoost,54.86%,91.15%,withdraw + repay
 Elastic Net,61.91%,41.36%,withdraw + repay
+DeepHit,57.84%,27.11%,withdraw + repay
+TransformationSurv,54.35%,26.61%,withdraw + repay
 Logistic Regression,81.97%,39.98%,withdraw + deposit
 Decision Tree,81.99%,68.75%,withdraw + deposit
 Naive Bayes,75.11%,51.08%,withdraw + deposit
 XGBoost,69.00%,74.14%,withdraw + deposit
 Elastic Net,76.19%,50.67%,withdraw + deposit
+DeepHit,78.14%,48.65%,withdraw + deposit
+TransformationSurv,69.24%,40.50%,withdraw + deposit

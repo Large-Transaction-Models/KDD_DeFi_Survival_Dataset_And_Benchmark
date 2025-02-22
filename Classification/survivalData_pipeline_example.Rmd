@@ -68,196 +68,6 @@ source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/get_classificat
 ```{r}
 # set the indexEvent and outcomeEvent
 indexEvent = "borrow"
-outcomeEvent = "account liquidated"
-
-# load the corresponding train and test data
-get_train_test_data(indexEvent, outcomeEvent)
-
-classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
-train_data = data_processing(train, classification_cutoff)
-test_data = data_processing(test, classification_cutoff)
-```
-
-```{r}
-# If you want to watch the percentages between "Yes" and "No" label, run this code.
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
-# When the ratio of "Yes" label is too low, we need use the SMOTE
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
-lr_return = logistic_regression(train_data, test_data)
-accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
-accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
-```
-
-```{r}
-nb_return = naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
-accuracy_nb = nb_return$metrics_nb
-```
-
-```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-en_return = elastic_net(train_data, test_data)
-accuracy_en_dataframe = en_return$metrics_en_dataframe
-accuracy_en = en_return$metrics_en
-```
-
-```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
-```
-
-```{r}
-# compare all the classification models
-metrics_list_BAL <- list(
-  list(accuracy_lr, "Logistic Regression"), 
-  list(accuracy_dt, "Decision Tree"), 
-  list(accuracy_nb, "Naive Bayes"), 
-  list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net"), 
-  list(accuracy_dh, "DeepHit"), 
-  list(accuracy_tfs, "Transformation Surv")
-)
-accuracy_comparison_plot(metrics_list_BAL)
-```
-
-```{r}
-# Show the final dataframe for all classification models,
-# including the classification model name, accuracy, data combination name.
-data_name_BAL <- paste(indexEvent, "+", outcomeEvent)
-accuracy_dataframe_list_BAL <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
-                                   accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
-                                   accuracy_tfs_dataframe)
-combined_results_BAL <- combine_classification_results(accuracy_dataframe_list_BAL, data_name_BAL)
-
-# display the combined dataframe
-pander(combined_results_BAL, caption = "Classification Model Performance")
-```
-
-```{r}
-# set the indexEvent and outcomeEvent
-indexEvent = "borrow"
-outcomeEvent = "deposit"
-
-# load the corresponding train and test data
-get_train_test_data(indexEvent, outcomeEvent)
-```
-
-```{r}
-classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
-train_data = data_processing(train, classification_cutoff)
-test_data = data_processing(test, classification_cutoff)
-```
-
-```{r}
-# If you want to watch the percentages between "Yes" and "No" label, run this code.
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
-train_data <- smote_data(train_data)
-# If you want to watch the percentages between "Yes" and "No" label, run this code.
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
-lr_return = logistic_regression(train_data, test_data)
-accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
-accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
-```
-
-```{r}
-nb_return = naive_bayes(train_data, test_data)
-accuracy_nb_dataframe = nb_return$metrics_nb_dataframe
-accuracy_nb = nb_return$metrics_nb
-```
-
-```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-en_return = elastic_net(train_data, test_data)
-accuracy_en_dataframe = en_return$metrics_en_dataframe
-accuracy_en = en_return$metrics_en
-```
-
-```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
-```
-
-```{r}
-# compare all the classification models
-metrics_list_BD <- list(
-  list(accuracy_lr, "Logistic Regression"), 
-  list(accuracy_dt, "Decision Tree"), 
-  list(accuracy_nb, "Naive Bayes"), 
-  list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net"), 
-  list(accuracy_dh, "DeepHit"), 
-  list(accuracy_tfs, "Transformation Surv")
-)
-accuracy_comparison_plot(metrics_list_BD)
-```
-
-```{r}
-# Show the final dataframe for all classification models,
-# including the classification model name, accuracy, data combination name.
-data_name_BD <- paste(indexEvent, "+", outcomeEvent)
-accuracy_dataframe_list_BD <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
-                                   accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
-                                   accuracy_tfs_dataframe)
-combined_results_BD <- combine_classification_results(accuracy_dataframe_list_BD, data_name_BD)
-
-# display the combined dataframe
-pander(combined_results_BD, caption = "Classification Model Performance")
-```
-
-```{r}
-# set the indexEvent and outcomeEvent
-indexEvent = "borrow"
 outcomeEvent = "repay"
 
 # load the corresponding train and test data
@@ -304,27 +114,13 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
-```
-
-```{r}
 # compare all the classification models
 metrics_list_BR <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net"), 
-  list(accuracy_dh, "DeepHit"), 
-  list(accuracy_tfs, "Transformation Surv")
+  list(accuracy_en, "Elastic Net")
 )
 accuracy_comparison_plot(metrics_list_BR)
 ```
@@ -335,8 +131,7 @@ accuracy_comparison_plot(metrics_list_BR)
 data_name_BR <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BR <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
-                                   accuracy_tfs_dataframe)
+                                   accuracy_en_dataframe)
 combined_results_BR <- combine_classification_results(accuracy_dataframe_list_BR, data_name_BR)
 
 # display the combined dataframe
@@ -397,27 +192,13 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
-```
-
-```{r}
 # compare all the classification models
 metrics_list_BW <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net"), 
-  list(accuracy_dh, "DeepHit"), 
-  list(accuracy_tfs, "Transformation Surv")
+  list(accuracy_en, "Elastic Net")
 )
 accuracy_comparison_plot(metrics_list_BW)
 ```
@@ -428,8 +209,7 @@ accuracy_comparison_plot(metrics_list_BW)
 data_name_BW <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BW <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
-                                   accuracy_tfs_dataframe)
+                                   accuracy_en_dataframe)
 combined_results_BW <- combine_classification_results(accuracy_dataframe_list_BW, data_name_BW)
 
 # display the combined dataframe
@@ -442,7 +222,7 @@ After we run all the data combinations, we can use the `combine_accuracy_datafra
 
 ```{r}
 combined_classification_results <- combine_accuracy_dataframes(
-  list(combined_results_BAL, combined_results_BD, combined_results_BR, combined_results_BW))
+  list(combined_results_BR, combined_results_BW))
 pander(combined_classification_results, caption = "Classification Model Performance for all data")
 ```
 
@@ -453,16 +233,11 @@ This section is only for a special need, not required for the whole pipeline wor
 In this section, the final output is a combined data frame that consolidates performance metrics for multiple classification models across different data scenarios. Each row represents a specific scenario (e.g., "borrow + withdraw" or "borrow + repay"), while the columns display the selected performance metric (e.g., "balanced_accuracy") and the corresponding values for each classification model (e.g., Logistic Regression, Decision Tree). 
 
 ```{r}
-ba_accuracy_dataframe_BAL <- specific_accuracy_statistics(data_name_BAL, "balanced_accuracy", 
-                                                      metrics_list_BAL)
-ba_accuracy_dataframe_BD <- specific_accuracy_statistics(data_name_BD, "balanced_accuracy", 
-                                                      metrics_list_BD)
 ba_accuracy_dataframe_BR <- specific_accuracy_statistics(data_name_BR, "balanced_accuracy", 
                                                       metrics_list_BR)
 ba_accuracy_dataframe_BW <- specific_accuracy_statistics(data_name_BW, "balanced_accuracy", 
                                                       metrics_list_BW)
 combined_accuracy_dataframe <- combine_accuracy_dataframes(
-  list(ba_accuracy_dataframe_BAL, ba_accuracy_dataframe_BD, ba_accuracy_dataframe_BR, 
-       ba_accuracy_dataframe_BW))
+  list(ba_accuracy_dataframe_BR, ba_accuracy_dataframe_BW))
 pander(combined_accuracy_dataframe, caption = "Combined accuracy dataframe")
 ```
