@@ -65,6 +65,7 @@ group_by <- dplyr::group_by
 source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/data_preprocessing.R")
 source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/model_evaluation_visual.R")
 source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/classification_models.R")
+source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/deep_learning_models.R")
 source("~/KDD_DeFi_Survival_Dataset_And_Benchmark/Classification/get_classification_cutoff.R")
 ```
 
@@ -122,13 +123,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_BAL <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_BAL)
 ```
@@ -139,7 +154,8 @@ accuracy_comparison_plot(metrics_list_BAL)
 data_name_BAL <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BAL <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_BAL <- combine_classification_results(accuracy_dataframe_list_BAL, data_name_BAL)
 
 # display the combined dataframe
@@ -168,9 +184,6 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 
 ```{r}
 train_data <- smote_data(train_data)
-```
-
-```{r}
 # If you want to watch the percentages between "Yes" and "No" label, run this code.
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
@@ -206,13 +219,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_BD <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_BD)
 ```
@@ -223,7 +250,8 @@ accuracy_comparison_plot(metrics_list_BD)
 data_name_BD <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BD <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_BD <- combine_classification_results(accuracy_dataframe_list_BD, data_name_BD)
 
 # display the combined dataframe
@@ -279,13 +307,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_BR <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_BR)
 ```
@@ -296,7 +338,8 @@ accuracy_comparison_plot(metrics_list_BR)
 data_name_BR <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BR <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_BR <- combine_classification_results(accuracy_dataframe_list_BR, data_name_BR)
 
 # display the combined dataframe
@@ -357,13 +400,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_BW <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_BW)
 ```
@@ -374,7 +431,8 @@ accuracy_comparison_plot(metrics_list_BW)
 data_name_BW <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BW <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_BW <- combine_classification_results(accuracy_dataframe_list_BW, data_name_BW)
 
 # display the combined dataframe
@@ -435,13 +493,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_DAL <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_DAL)
 ```
@@ -452,7 +524,8 @@ accuracy_comparison_plot(metrics_list_DAL)
 data_name_DAL <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_DAL <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_DAL <- combine_classification_results(accuracy_dataframe_list_DAL, data_name_DAL)
 
 # display the combined dataframe
@@ -513,13 +586,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_DB <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_DB)
 ```
@@ -530,7 +617,8 @@ accuracy_comparison_plot(metrics_list_DB)
 data_name_DB <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_DB <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_DB <- combine_classification_results(accuracy_dataframe_list_DB, data_name_DB)
 
 # display the combined dataframe
@@ -591,13 +679,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_DR <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
-  list(accuracy_nb, "Naive Bayes"),
+  list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_DR)
 ```
@@ -608,7 +710,8 @@ accuracy_comparison_plot(metrics_list_DR)
 data_name_DR <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_DR <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_DR <- combine_classification_results(accuracy_dataframe_list_DR, data_name_DR)
 
 # display the combined dataframe
@@ -664,13 +767,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_DW <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_DW)
 ```
@@ -681,7 +798,8 @@ accuracy_comparison_plot(metrics_list_DW)
 data_name_DW <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_DW <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_DW <- combine_classification_results(accuracy_dataframe_list_DW, data_name_DW)
 
 # display the combined dataframe
@@ -742,13 +860,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_RAL <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_RAL)
 ```
@@ -759,7 +891,8 @@ accuracy_comparison_plot(metrics_list_RAL)
 data_name_RAL <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_RAL <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_RAL <- combine_classification_results(accuracy_dataframe_list_RAL, data_name_RAL)
 
 # display the combined dataframe
@@ -815,13 +948,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_RB <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_RB)
 ```
@@ -832,7 +979,8 @@ accuracy_comparison_plot(metrics_list_RB)
 data_name_RB <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_RB <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_RB <- combine_classification_results(accuracy_dataframe_list_RB, data_name_RB)
 
 # display the combined dataframe
@@ -893,13 +1041,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_RD <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_RD)
 ```
@@ -910,7 +1072,8 @@ accuracy_comparison_plot(metrics_list_RD)
 data_name_RD <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_RD <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_RD <- combine_classification_results(accuracy_dataframe_list_RD, data_name_RD)
 
 # display the combined dataframe
@@ -971,13 +1134,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_RW <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_RW)
 ```
@@ -988,7 +1165,8 @@ accuracy_comparison_plot(metrics_list_RW)
 data_name_RW <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_RW <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_RW <- combine_classification_results(accuracy_dataframe_list_RW, data_name_RW)
 
 # display the combined dataframe
@@ -1049,13 +1227,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_WAL <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_WAL)
 ```
@@ -1066,7 +1258,8 @@ accuracy_comparison_plot(metrics_list_WAL)
 data_name_WAL <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_WAL <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_WAL <- combine_classification_results(accuracy_dataframe_list_WAL, data_name_WAL)
 
 # display the combined dataframe
@@ -1127,13 +1320,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_WB <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_WB)
 ```
@@ -1144,7 +1351,8 @@ accuracy_comparison_plot(metrics_list_WB)
 data_name_WB <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_WB <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_WB <- combine_classification_results(accuracy_dataframe_list_WB, data_name_WB)
 
 # display the combined dataframe
@@ -1205,13 +1413,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_WR <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_WR)
 ```
@@ -1222,7 +1444,8 @@ accuracy_comparison_plot(metrics_list_WR)
 data_name_WR <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_WR <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_WR <- combine_classification_results(accuracy_dataframe_list_WR, data_name_WR)
 
 # display the combined dataframe
@@ -1278,13 +1501,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_WD <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_WD)
 ```
@@ -1295,7 +1532,8 @@ accuracy_comparison_plot(metrics_list_WD)
 data_name_WD <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_WD <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_WD <- combine_classification_results(accuracy_dataframe_list_WD, data_name_WD)
 
 # display the combined dataframe
