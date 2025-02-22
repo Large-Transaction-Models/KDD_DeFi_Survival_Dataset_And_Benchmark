@@ -145,10 +145,10 @@ specific_accuracy_statistics <- function(event_pair, accuracy_type, metrics_list
     # get the model name
     model_name <- metric_item[[2]]
     if (accuracy_type == "balanced_accuracy") {
-      results[[model_name]] <- round(accuracy_data$balanced_accuracy * 100, 1)
+      results[[model_name]] <- round(accuracy_data$balanced_accuracy * 100, 2)
     }
     else if (accuracy_type == "f1_score") {
-      results[[model_name]] <- round(accuracy_data$f1_score * 100, 1)
+      results[[model_name]] <- round(accuracy_data$f1_score * 100, 2)
     }
     else {
       # An error message is displayed if the specified accuracy_type does not exist.

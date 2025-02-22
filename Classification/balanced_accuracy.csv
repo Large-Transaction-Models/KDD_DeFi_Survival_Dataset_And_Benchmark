@@ -1,17 +1,17 @@
 balanced_accuracy,Logistic.Regression,Decision.Tree,Naive.Bayes,XGBoost,Elastic.Net,DeepHit,Transformation.Surv
-borrow + account liquidated,50.4,50.7,50.7,49.3,50.4,50.8,50.8
-borrow + deposit,62.9,63.7,66,64.5,62.9,40,36.2
-borrow + repay,68.7,70.9,71.9,67.5,66.9,62.9,61.3
-borrow + withdraw,61.4,63.6,66.1,54.7,61.4,71.1,65.8
-deposit + account liquidated,50.1,50.1,50.1,50,50.1,50.1,50.1
-deposit + borrow,61.8,58.6,52.1,50,61.8,58.6,58.6
-deposit + repay,62.1,58.6,48,50,62.1,58.6,58.6
-deposit + withdraw,76.9,78.4,72,77.6,75.9,72.3,62.8
-repay + account liquidated,50.1,51.1,50,50.2,50.1,50.3,50.3
-repay + borrow,70.6,77.9,68.5,76.8,72.3,71.6,55.6
-repay + deposit,63.6,61.7,67.4,75.7,63.6,57.2,60.7
-repay + withdraw,62.1,58.5,68.4,42.7,62.1,69.1,70.1
-withdraw + account liquidated,50.1,50.1,50.1,50,50.1,50,50
-withdraw + borrow,62.4,49.1,59.3,88.9,62.4,55.8,53.7
-withdraw + repay,61.9,50,66.7,54.9,61.9,57.8,54.4
-withdraw + deposit,82,82,75.1,69,76.2,78.1,69.2
+borrow + account liquidated,50.44,50.74,50.68,49.35,50.44,50.75,50.75
+borrow + deposit,62.93,63.74,66.04,64.53,62.93,39.97,36.21
+borrow + repay,68.71,70.90,71.85,67.48,66.87,62.88,61.35
+borrow + withdraw,61.39,63.60,66.13,54.73,61.40,71.11,65.79
+deposit + account liquidated,50.11,50.09,50.06,50.00,50.11,50.05,50.05
+deposit + borrow,61.80,58.55,52.11,50.00,61.80,58.55,58.55
+deposit + repay,62.12,58.57,48.00,50.00,62.13,58.57,58.57
+deposit + withdraw,76.86,78.38,72.01,77.62,75.95,72.31,62.83
+repay + account liquidated,50.12,51.10,50.05,50.24,50.12,50.28,50.27
+repay + borrow,70.62,77.91,68.47,76.83,72.27,71.57,55.58
+repay + deposit,63.63,61.67,67.41,75.69,63.64,57.16,60.66
+repay + withdraw,62.06,58.52,68.41,42.72,62.07,69.14,70.09
+withdraw + account liquidated,50.07,50.06,50.06,49.97,50.07,50.04,50.05
+withdraw + borrow,62.42,49.13,59.34,88.93,62.42,55.82,53.67
+withdraw + repay,61.92,49.97,66.75,54.86,61.91,57.84,54.35
+withdraw + deposit,81.97,81.99,75.11,69.00,76.19,78.14,69.24
