@@ -88,20 +88,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -111,15 +100,26 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
@@ -169,9 +169,7 @@ outcomeEvent = "deposit"
 
 # load the corresponding train and test data
 get_train_test_data(indexEvent, outcomeEvent)
-```
 
-```{r}
 classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
 train_data = data_processing(train, classification_cutoff)
 test_data = data_processing(test, classification_cutoff)
@@ -183,21 +181,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-# If you want to watch the percentages between "Yes" and "No" label, run this code.
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -207,15 +193,21 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
@@ -365,20 +357,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -388,15 +369,26 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
@@ -458,20 +450,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -481,15 +462,26 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
@@ -551,20 +543,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -574,15 +555,26 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
@@ -644,20 +636,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -667,15 +648,26 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
@@ -825,20 +817,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -848,15 +829,26 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
@@ -1006,20 +998,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -1029,15 +1010,26 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
@@ -1099,20 +1091,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -1122,15 +1103,26 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
@@ -1192,20 +1184,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -1215,15 +1196,26 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
@@ -1285,20 +1277,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -1308,15 +1289,26 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
@@ -1378,20 +1370,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -1401,15 +1382,26 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
