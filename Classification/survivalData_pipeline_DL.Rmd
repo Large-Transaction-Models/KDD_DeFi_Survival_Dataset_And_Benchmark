@@ -93,12 +93,6 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-# If you want to watch the percentages between "Yes" and "No" label, run this code.
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 dh_return = deephit_model(train_data, test_data)
 accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
 ```
@@ -126,21 +120,10 @@ outcomeEvent = "deposit"
 
 # load the corresponding train and test data
 get_train_test_data(indexEvent, outcomeEvent)
-```
 
-```{r}
 classification_cutoff = get_classification_cutoff(indexEvent, outcomeEvent)
 train_data = data_processing(train, classification_cutoff)
 test_data = data_processing(test, classification_cutoff)
-```
-
-```{r}
-# If you want to watch the percentages between "Yes" and "No" label, run this code.
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
-train_data <- smote_data(train_data)
 ```
 
 ```{r}
@@ -227,11 +210,6 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 dh_return = deephit_model(train_data, test_data)
 accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
 ```
@@ -267,11 +245,6 @@ test_data = data_processing(test, classification_cutoff)
 
 ```{r}
 # If you want to watch the percentages between "Yes" and "No" label, run this code.
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
-train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
@@ -315,11 +288,6 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 dh_return = deephit_model(train_data, test_data)
 accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
 ```
@@ -355,11 +323,6 @@ test_data = data_processing(test, classification_cutoff)
 
 ```{r}
 # If you want to watch the percentages between "Yes" and "No" label, run this code.
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
-train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
@@ -442,11 +405,6 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 dh_return = deephit_model(train_data, test_data)
 accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
 ```
@@ -525,11 +483,6 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 dh_return = deephit_model(train_data, test_data)
 accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
 ```
@@ -565,11 +518,6 @@ test_data = data_processing(test, classification_cutoff)
 
 ```{r}
 # If you want to watch the percentages between "Yes" and "No" label, run this code.
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
-train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
@@ -613,11 +561,6 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 dh_return = deephit_model(train_data, test_data)
 accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
 ```
@@ -657,11 +600,6 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 dh_return = deephit_model(train_data, test_data)
 accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
 ```
@@ -697,11 +635,6 @@ test_data = data_processing(test, classification_cutoff)
 
 ```{r}
 # If you want to watch the percentages between "Yes" and "No" label, run this code.
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
-train_data <- smote_data(train_data)
 get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 

@@ -228,56 +228,61 @@ smote_data <- function(train_data, target_var = "event", seed = 123) {
 
 ### def calculate_model_metrics
 
-The `calculate_model_metrics` function evaluates a classification model's performance based on a given confusion matrix by computing key metrics, including **class accuracy (specificity)**, **negative-1 accuracy (sensitivity/recall)**, **balanced accuracy**, **precision**, **F1-score** and the **AUC score**. It extracts True Negatives (TN), False Positives (FP), False Negatives (FN), and True Positives (TP) from the matrix and calculates specificity as \( TN / (TN + FP) \) and sensitivity as \( TP / (TP + FN) \), then derives balanced accuracy as their average. Precision is determined as \( TP / (TP + FP) \), and the F1-score is computed as the harmonic mean of precision and recall. The function prints the balanced accuracy and F1-score in percentage format before returning them in a list.
+The function `calculate_model_metrics` is used to calculate multiple performance indicators of the binary classification model, including balanced accuracy, F1 score, and AUC score. The function first extracts true negatives, false positives, false negatives, and true positives from the input confusion matrix, and then calculates the specificity (True Negative Rate), sensitivity (True Positive Rate), and precision, and uses these indicators to calculate the balanced accuracy and F1 score, while handling possible division by zero to prevent the generation of NaN values. Next, the function constructs an array of true labels based on the confusion matrix and converts the predicted values to numeric types so that the ROC curve and AUC score can be calculated using the pROC package (provided that the label contains at least two categories and the number of predicted values
+matches). Finally, the function prints all performance indicators and returns these measurement results in a list form, providing a comprehensive reference for model evaluation.
 
 ```{r}
 calculate_model_metrics <- function(confusion_matrix, binary_predictions, model_name) {
-  # Load required package
-  # library(pROC) # Ensure this package is installed for AUC calculation
+  # Load the required package for AUC calculation (uncomment if not already loaded)
+  # library(pROC)
   
+  # Extract True Negatives, False Positives, False Negatives, and True Positives from the confusion matrix
   TN <- confusion_matrix[1, 1] # True Negatives
   FP <- confusion_matrix[1, 2] # False Positives
   FN <- confusion_matrix[2, 1] # False Negatives
   TP <- confusion_matrix[2, 2] # True Positives
   
-  # Specificity (True Negative Rate)
+  # Calculate Specificity (True Negative Rate)
   specificity <- TN / (TN + FP)
   
-  # Sensitivity (Recall, True Positive Rate)
+  # Calculate Sensitivity (Recall, True Positive Rate)
   sensitivity <- TP / (TP + FN)
   
-  # Balanced Accuracy (Average of Sensitivity and Specificity)
+  # Calculate Balanced Accuracy as the average of Sensitivity and Specificity
   balanced_accuracy <- (specificity + sensitivity) / 2
   
-  # Precision
+  # Calculate Precision
   precision <- TP / (TP + FP)
   
-  # F1 Score
+  # Calculate F1 Score as the harmonic mean of Precision and Sensitivity
   f1_score <- 2 * (precision * sensitivity) / (precision + sensitivity)
   
-  # Ensure values are not NaN (caused by zero division)
-  if (is.nan(balanced_accuracy)) balanced_accuracy <- 0.50
-  if (is.nan(f1_score)) f1_score <- 0.50
+  # Recover the actual labels from the confusion matrix
+  # In this confusion matrix, the rows represent predicted values and the columns represent actual values.
+  actual_labels <- c(rep(0, TN + FP), rep(1, FN + TP)) # 0 represents "no", 1 represents "yes"
   
-  # Compute AUC (Area Under the Curve) Score
-  actual_labels <- as.numeric(rownames(confusion_matrix)) # Extract actual labels
-  predicted_probabilities <- as.numeric(binary_predictions) # Ensure predictions are numeric
+  # Ensure that binary_predictions are treated as probability values
+  predicted_probabilities <- as.numeric(binary_predictions) # Convert predictions to numeric
   
-  auc_score <- NA  # Default value in case of calculation failure
-  # Ensure there are at least two unique classes
-  if (length(unique(actual_labels)) > 1) {
+  # Calculate the AUC (Area Under the Curve) Score
+  auc_score <- NA # Default value in case the AUC cannot be calculated
+  if (length(actual_labels) == length(predicted_probabilities) && length(unique(actual_labels)) > 1) {
     roc_curve <- roc(actual_labels, predicted_probabilities)
     auc_score <- auc(roc_curve)
   }
   
-  # Print all performance metrics
+  if (is.nan(balanced_accuracy)) balanced_accuracy <- 0.50
+  if (is.nan(f1_score)) f1_score <- 0.50
+  if (is.nan(auc_score)) auc_score <- 0.50
+  
+  # Print all performance metrics with labels
   print(paste(model_name, "model prediction accuracy:"))
   cat("Balanced Accuracy:", sprintf("%.2f%%", balanced_accuracy * 100), "\n")
   cat("F1 Score:", sprintf("%.2f%%", f1_score * 100), "\n")
-  cat("AUC Score:", sprintf("%.2f", auc_score), "\n")
+  cat("AUC Score:", sprintf("%.2f%%", auc_score * 100), "\n")
   
   # Return all computed metrics in a list
-  return (list(
+  return(list(
     balanced_accuracy = balanced_accuracy, 
     f1_score = f1_score,
     auc_score = auc_score
@@ -1351,7 +1356,7 @@ deephit_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L,
     Actual = factor(y_test, levels = c(0, 1))
   )
   
-  print(test_conf_matrix)
+  # print(test_conf_matrix)
   
   # Calculate model performance metrics (such as accuracy, sensitivity, etc.) using the confusion matrix
   # The function calculate_model_metrics is assumed to be defined elsewhere
@@ -1542,144 +1547,6 @@ def train_deephit(train_data, class_weight=None):
 The main function of the `transformation_surv_model` function is to train the **Transformation Survival Model** and use the test data for prediction and evaluation. The function first performs data validation to ensure that `train_data` and `test_data` are neither empty nor contain the required `event` column, otherwise an error message will be thrown. Subsequently, the training data is divided into **80% training set** and **20% validation set** to improve the generalization ability of the model, and the random seed is set to ensure the reproducibility of data partitioning. During the data preprocessing stage, the function automatically removes the `id` column (if it exists) because this column usually does not directly contribute to model training. During the feature and label extraction process, all data sets (training set, validation set, and test set) are split into feature matrices `X` (removing the `event` column) and labels `y` (retaining only the `event` column). To ensure consistent data format, the function defines a `convert_to_numeric` auxiliary function to convert all feature columns to numerical types and fill missing values with the median (if the median is not available, it is filled with 0), and then convert the data to a matrix format to adapt to the deep learning model on the Python side. In addition, the `event` label is converted to **binary (0/1) format** to ensure that the classification model can handle it correctly. After the data is processed, the function converts the data to a format recognizable by Python through `r_to_py` and creates a list containing training data, hyperparameters such as `epochs`, `num_nodes`, `dropout`, `batch_size`, and `lr`. Similarly, the test data is also converted to a Python-compatible format for subsequent prediction tasks. If the user provides `class_weight`, the information is converted to a Python dictionary to solve the problem of class imbalance. The function then calls `source_python("transformation_surv_model.py")` to load the `train_transformation_surv` model implemented in Python, and passes the processed training data to start model training. After training, the trained model is used to predict the test data `X_test`, and the prediction results on the Python side are converted back to R for analysis. To evaluate the performance of the model, the function constructs a **Confusion Matrix** to compare the categories predicted by the model and the true `y_test` labels. Then, performance metrics (such as accuracy, sensitivity, specificity, etc.) are calculated through `calculate_model_metrics` and converted to data frame format for further analysis and visualization. Finally, the function returns a list containing `metrics_tfs_dataframe` (performance data frame for display) and `metrics_tfs` (raw performance metrics) to support subsequent research and model optimization.
 
 ```{r}
-transformation_surv_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L, 64L), dropout = 0, 
-                                      batch_size = 256L, lr = 0.001, class_weight = NULL) {
-  
-  # library(reticulate) # Enables integration with Python, allowing R to call Python functions
-  # library(dplyr) # Provides functions for data manipulation and transformation
-  # Data Validation: Ensure that training and testing datasets are provided, not empty, and include 
-  # the 'event' column.
-  if (is.null(train_data) || is.null(test_data)) {
-    stop("Error: train_data or test_data is NULL!")
-  }
-  if (nrow(train_data) == 0 || nrow(test_data) == 0) {
-    stop("Error: train_data or test_data is empty!")
-  }
-  if (!("event" %in% colnames(train_data)) || !("event" %in% colnames(test_data))) {
-    stop("Error: 'event' column is missing!")
-  }
-  
-  # Split the training data into training (80%) and validation (20%) subsets
-  set.seed(123) # Set seed for reproducibility
-  train_idx <- sample(seq_len(nrow(train_data)), size = 0.8 * nrow(train_data))
-  val_idx <- setdiff(seq_len(nrow(train_data)), train_idx)
-  train_subset <- train_data[train_idx, ]
-  val_subset <- train_data[val_idx, ]
-  
-  # Preprocess: Remove the "id" column from training, validation, and testing datasets if present
-  if ("id" %in% names(train_subset)) {
-    train_subset <- train_subset %>% select(-id)
-  }
-  if ("id" %in% names(val_subset)) {
-    val_subset <- val_subset %>% select(-id)
-  }
-  if ("id" %in% names(test_data)) {
-    test_data <- test_data %>% select(-id)
-  }
-  
-  # Feature and Label Extraction:
-  # Separate features and labels for training, validation, and test datasets
-  X_train <- train_subset %>% select(-event)
-  y_train <- train_subset$event
-  X_val <- val_subset %>% select(-event)
-  y_val <- val_subset$event
-  X_test <- test_data %>% select(-event)
-  y_test <- test_data$event
-  
-  # Define a helper function to convert features to numeric and handle missing values
-  convert_to_numeric <- function(x) {
-    if (is.numeric(x)) {
-      res <- x
-    } 
-    else if (is.factor(x)) {
-      res <- suppressWarnings(as.numeric(as.character(x)))
-    } 
-    else if (is.character(x)) {
-      res <- suppressWarnings(as.numeric(x))
-    } 
-    else {
-      res <- suppressWarnings(as.numeric(x))
-    }
-    if (any(is.na(res))) {
-      med <- median(res, na.rm = TRUE)
-      if (is.na(med)) med <- 0 # Default to 0 if median cannot be computed
-      res[is.na(res)] <- med
-    }
-    return(res)
-  }
-  
-  # Convert all feature columns in training, validation, and test sets to numeric
-  X_train <- X_train %>% mutate(across(everything(), convert_to_numeric))
-  X_val <- X_val %>% mutate(across(everything(), convert_to_numeric))
-  X_test <- X_test %>% mutate(across(everything(), convert_to_numeric))
-  
-  # Convert the data frames of features to matrices
-  X_train <- as.matrix(X_train)
-  X_val <- as.matrix(X_val)
-  X_test <- as.matrix(X_test)
-  
-  # Convert labels to binary numeric values (0/1)
-  y_train <- as.numeric(y_train) - 1
-  y_val <- as.numeric(y_val) - 1
-  y_test <- as.numeric(y_test) - 1
-  
-  # Prepare Data for Python:
-  # Create a list containing the training features, labels, validation data, and model parameters, 
-  # then convert it to a Python object.
-  train_data_py <- r_to_py(list(
-    X = X_train,
-    y = y_train,
-    val_X = X_val,
-    val_y = y_val,
-    epochs = as.integer(epochs),
-    num_nodes = num_nodes,
-    dropout = dropout,
-    batch_size = as.integer(batch_size),
-    lr = lr
-  ))
-  
-  # Prepare the test data in a similar fashion
-  test_data_py <- r_to_py(list(
-    X = X_test,
-    y = y_test
-  ))
-  
-  # Convert class_weight to a Python dictionary if provided
-  class_weight_py <- NULL
-  if (!is.null(class_weight)) {
-    class_weight_py <- r_to_py(as.list(class_weight))
-  }
-  
-  # Load the Python script that implements the Transformation Survival model
-  source_python("transformation_surv_model.py")
-  
-  # Train the Transformation Survival model using the provided training data
-  # Pass class_weight_py to handle class imbalance in Python
-  trans_model <- train_transformation_surv(train_data_py, class_weight = class_weight_py)
-  
-  # Use the trained model to predict outcomes on the test dataset
-  predictions <- trans_model$predict(test_data_py[["X"]])
-  
-  # Convert predictions from Python format back to R
-  predictions <- py_to_r(predictions)
-  
-  # Create a confusion matrix comparing predicted outcomes with the actual test labels
-  test_conf_matrix <- table(
-    Predicted = factor(predictions, levels = c(0, 1)),
-    Actual = factor(y_test, levels = c(0, 1))
-  )
-  
-  # Calculate performance metrics using the confusion matrix
-  # This function (calculate_model_metrics) is assumed to be defined elsewhere
-  metrics_tfs <- calculate_model_metrics(test_conf_matrix, predictions, "TransformationSurv")
-  
-  # Convert the metrics into a data frame for easy viewing and further analysis
-  metrics_tfs_dataframe <- get_dataframe("TransformationSurv", metrics_tfs)
-  
-  # Return a list containing both the metrics data frame and the raw metrics
-  return(list(metrics_tfs_dataframe = metrics_tfs_dataframe, metrics_tfs = metrics_tfs))
-}
-
 # Function to train a Transformation Survival model using the given training and test datasets
 transformation_surv_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L, 64L), dropout = 0, 
                                       batch_size = 256L, lr = 0.001, class_weight = NULL) {
@@ -1807,6 +1674,8 @@ transformation_surv_model <- function(train_data, test_data, epochs = 10, num_no
     Predicted = factor(predictions, levels = c(0, 1)),
     Actual = factor(y_test, levels = c(0, 1))
   )
+  
+  # print(test_conf_matrix)
   
   # Calculate performance metrics using the confusion matrix
   # This function (calculate_model_metrics) is assumed to be defined elsewhere

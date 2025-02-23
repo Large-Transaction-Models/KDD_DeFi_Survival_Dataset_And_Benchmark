@@ -7,52 +7,56 @@ library(caret)
 library(pROC)
 
 calculate_model_metrics <- function(confusion_matrix, binary_predictions, model_name) {
-  # Load required package
-  # library(pROC) # Ensure this package is installed for AUC calculation
+  # Load the required package for AUC calculation (uncomment if not already loaded)
+  # library(pROC)
   
+  # Extract True Negatives, False Positives, False Negatives, and True Positives from the confusion matrix
   TN <- confusion_matrix[1, 1] # True Negatives
   FP <- confusion_matrix[1, 2] # False Positives
   FN <- confusion_matrix[2, 1] # False Negatives
   TP <- confusion_matrix[2, 2] # True Positives
   
-  # Specificity (True Negative Rate)
+  # Calculate Specificity (True Negative Rate)
   specificity <- TN / (TN + FP)
   
-  # Sensitivity (Recall, True Positive Rate)
+  # Calculate Sensitivity (Recall, True Positive Rate)
   sensitivity <- TP / (TP + FN)
   
-  # Balanced Accuracy (Average of Sensitivity and Specificity)
+  # Calculate Balanced Accuracy as the average of Sensitivity and Specificity
   balanced_accuracy <- (specificity + sensitivity) / 2
   
-  # Precision
+  # Calculate Precision
   precision <- TP / (TP + FP)
   
-  # F1 Score
+  # Calculate F1 Score as the harmonic mean of Precision and Sensitivity
   f1_score <- 2 * (precision * sensitivity) / (precision + sensitivity)
   
-  # Ensure values are not NaN (caused by zero division)
-  if (is.nan(balanced_accuracy)) balanced_accuracy <- 0.50
-  if (is.nan(f1_score)) f1_score <- 0.50
+  # Recover the actual labels from the confusion matrix
+  # In this confusion matrix, the rows represent predicted values and the columns represent actual values.
+  actual_labels <- c(rep(0, TN + FP), rep(1, FN + TP)) # 0 represents "no", 1 represents "yes"
   
-  # Compute AUC (Area Under the Curve) Score
-  actual_labels <- as.numeric(rownames(confusion_matrix)) # Extract actual labels
-  predicted_probabilities <- as.numeric(binary_predictions) # Ensure predictions are numeric
+  # Ensure that binary_predictions are treated as probability values
+  predicted_probabilities <- as.numeric(binary_predictions) # Convert predictions to numeric
   
-  auc_score <- NA  # Default value in case of calculation failure
-  # Ensure there are at least two unique classes
-  if (length(unique(actual_labels)) > 1) {
+  # Calculate the AUC (Area Under the Curve) Score
+  auc_score <- NA # Default value in case the AUC cannot be calculated
+  if (length(actual_labels) == length(predicted_probabilities) && length(unique(actual_labels)) > 1) {
     roc_curve <- roc(actual_labels, predicted_probabilities)
     auc_score <- auc(roc_curve)
   }
   
-  # Print all performance metrics
+  if (is.nan(balanced_accuracy)) balanced_accuracy <- 0.50
+  if (is.nan(f1_score)) f1_score <- 0.50
+  if (is.nan(auc_score)) auc_score <- 0.50
+  
+  # Print all performance metrics with labels
   print(paste(model_name, "model prediction accuracy:"))
   cat("Balanced Accuracy:", sprintf("%.2f%%", balanced_accuracy * 100), "\n")
   cat("F1 Score:", sprintf("%.2f%%", f1_score * 100), "\n")
-  cat("AUC Score:", sprintf("%.2f", auc_score), "\n")
+  cat("AUC Score:", sprintf("%.2f%%", auc_score * 100), "\n")
   
   # Return all computed metrics in a list
-  return (list(
+  return(list(
     balanced_accuracy = balanced_accuracy, 
     f1_score = f1_score,
     auc_score = auc_score
