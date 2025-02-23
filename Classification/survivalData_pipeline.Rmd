@@ -228,57 +228,73 @@ smote_data <- function(train_data, target_var = "event", seed = 123) {
 
 ### def calculate_model_metrics
 
-The `calculate_model_metrics` function evaluates a classification model's performance based on a given confusion matrix by computing key metrics, including **class accuracy (specificity)**, **negative-1 accuracy (sensitivity/recall)**, **balanced accuracy**, **precision**, and the **F1-score**. It extracts True Negatives (TN), False Positives (FP), False Negatives (FN), and True Positives (TP) from the matrix and calculates specificity as \( TN / (TN + FP) \) and sensitivity as \( TP / (TP + FN) \), then derives balanced accuracy as their average. Precision is determined as \( TP / (TP + FP) \), and the F1-score is computed as the harmonic mean of precision and recall. The function prints the balanced accuracy and F1-score in percentage format before returning them in a list.
+The `calculate_model_metrics` function evaluates a classification model's performance based on a given confusion matrix by computing key metrics, including **class accuracy (specificity)**, **negative-1 accuracy (sensitivity/recall)**, **balanced accuracy**, **precision**, **F1-score** and the **AUC score**. It extracts True Negatives (TN), False Positives (FP), False Negatives (FN), and True Positives (TP) from the matrix and calculates specificity as \( TN / (TN + FP) \) and sensitivity as \( TP / (TP + FN) \), then derives balanced accuracy as their average. Precision is determined as \( TP / (TP + FP) \), and the F1-score is computed as the harmonic mean of precision and recall. The function prints the balanced accuracy and F1-score in percentage format before returning them in a list.
 
 ```{r}
 calculate_model_metrics <- function(confusion_matrix, binary_predictions, model_name) {
+  # Load required package
+  # library(pROC) # Ensure this package is installed for AUC calculation
+  
   TN <- confusion_matrix[1, 1] # True Negatives
   FP <- confusion_matrix[1, 2] # False Positives
   FN <- confusion_matrix[2, 1] # False Negatives
   TP <- confusion_matrix[2, 2] # True Positives
   
-  # positive Class accuracy (Specificity): TN / (TN + FP)
-  class_accuracy <- TN / (TN + FP)
+  # Specificity (True Negative Rate)
+  specificity <- TN / (TN + FP)
   
-  # negative 1 accuracy (Sensitivity/Recall): TP / (TP + FN)
-  negative_1_accuracy <- TP / (TP + FN)
+  # Sensitivity (Recall, True Positive Rate)
+  sensitivity <- TP / (TP + FN)
   
-  # balanced accuracy: Average of Sensitivity and Specificity
-  balanced_accuracy <- (class_accuracy + negative_1_accuracy) / 2
+  # Balanced Accuracy (Average of Sensitivity and Specificity)
+  balanced_accuracy <- (specificity + sensitivity) / 2
   
-  # precision
+  # Precision
   precision <- TP / (TP + FP)
   
-  # f1 score
-  f1_score <- 2 * (precision * negative_1_accuracy) / (precision + negative_1_accuracy)
+  # F1 Score
+  f1_score <- 2 * (precision * sensitivity) / (precision + sensitivity)
   
-  if (is.nan(balanced_accuracy)) {
-    balanced_accuracy <- 0.50
+  # Ensure values are not NaN (caused by zero division)
+  if (is.nan(balanced_accuracy)) balanced_accuracy <- 0.50
+  if (is.nan(f1_score)) f1_score <- 0.50
+  
+  # Compute AUC (Area Under the Curve) Score
+  actual_labels <- as.numeric(rownames(confusion_matrix)) # Extract actual labels
+  predicted_probabilities <- as.numeric(binary_predictions) # Ensure predictions are numeric
+  
+  auc_score <- NA  # Default value in case of calculation failure
+  # Ensure there are at least two unique classes
+  if (length(unique(actual_labels)) > 1) {
+    roc_curve <- roc(actual_labels, predicted_probabilities)
+    auc_score <- auc(roc_curve)
   }
   
-  if (is.nan(f1_score)) {
-    f1_score <- 0.50
-  }
-  
-  # print out all the accuracy records
+  # Print all performance metrics
   print(paste(model_name, "model prediction accuracy:"))
-  cat("Balanced accuracy:", sprintf("%.2f%%", balanced_accuracy * 100), "\n")
-  cat("F1 score:", sprintf("%.2f%%", f1_score * 100), "\n")
+  cat("Balanced Accuracy:", sprintf("%.2f%%", balanced_accuracy * 100), "\n")
+  cat("F1 Score:", sprintf("%.2f%%", f1_score * 100), "\n")
+  cat("AUC Score:", sprintf("%.2f", auc_score), "\n")
   
-  return (list(balanced_accuracy = balanced_accuracy, 
-               f1_score = f1_score))
+  # Return all computed metrics in a list
+  return (list(
+    balanced_accuracy = balanced_accuracy, 
+    f1_score = f1_score,
+    auc_score = auc_score
+  ))
 }
 ```
 
 ### def get_dataframe
 
-The `get_dataframe` function creates a formatted data frame containing accuracy metrics for a given model. It takes two inputs: `model_name`, a string representing the model's name, and `metrics`, a list containing the model's accuracy metrics. The function constructs a data frame with three columns: "Model," "Balanced_Accuracy," and "F1_Score." The accuracy values are converted to percentages with two decimal places using `sprintf("%.2f%%", value * 100)`. Finally, the formatted data frame is returned.
+The `get_dataframe` function creates a formatted data frame containing accuracy metrics for a given model. It takes two inputs: `model_name`, a string representing the model's name, and `metrics`, a list containing the model's accuracy metrics. The function constructs a data frame with three columns: "Model," "AUC_Score," and "F1_Score." The accuracy values are converted to percentages with two decimal places using `sprintf("%.2f%%", value * 100)`. Finally, the formatted data frame is returned.
 
 ```{r}
 get_dataframe <- function(model_name, metrics) {
   metrics_dataframe <- data.frame(
     Model = model_name, 
-    Balanced_Accuracy = sprintf("%.2f%%", metrics$balanced_accuracy * 100), 
+    # Balanced_Accuracy = sprintf("%.2f%%", metrics$balanced_accuracy * 100), 
+    AUC_Score = sprintf("%.2f%%", metrics$auc_score * 100), 
     F1_Score = sprintf("%.2f%%", metrics$f1_score * 100)
   )
   return (metrics_dataframe)
@@ -339,7 +355,7 @@ get_percentage <- function(survivalDataForClassification, indexEvent, outcomeEve
 
 ### def accuracy_comparison_plot
 
-The `accuracy_comparison_plot` function visualizes the accuracy performance of different models by creating a faceted bar plot. It takes `metrics_list` as input, where each element consists of a model’s accuracy metrics and its corresponding name. The function first initializes an empty data frame and iterates through `metrics_list`, extracting `balanced_accuracy` and `f1_score` for each model, and appending them to the data frame. The data is then transformed into a long format using `reshape2::melt()` to facilitate plotting. A `ggplot2` bar chart is generated, where models are represented on the x-axis and accuracy values on the y-axis. The plot is faceted by metric type, ensuring a separate visualization for `balanced_accuracy` and `f1_score`. Labels displaying percentage values are added on top of each bar for clarity. The final visualization is styled using a minimal theme, with x-axis text rotated for better readability.
+The `accuracy_comparison_plot` function visualizes the accuracy performance of different models by creating a faceted bar plot. It takes `metrics_list` as input, where each element consists of a model’s accuracy metrics and its corresponding name. The function first initializes an empty data frame and iterates through `metrics_list`, extracting `auc_score` and `f1_score` for each model, and appending them to the data frame. The data is then transformed into a long format using `reshape2::melt()` to facilitate plotting. A `ggplot2` bar chart is generated, where models are represented on the x-axis and accuracy values on the y-axis. The plot is faceted by metric type, ensuring a separate visualization for `balanced_accuracy` and `f1_score`. Labels displaying percentage values are added on top of each bar for clarity. The final visualization is styled using a minimal theme, with x-axis text rotated for better readability.
 
 ```{r}
 accuracy_comparison_plot <- function(metrics_list) {
@@ -355,7 +371,8 @@ accuracy_comparison_plot <- function(metrics_list) {
     # create a temporary dataframe for this model
     temp_df <- data.frame(
       Model = model_name, 
-      BalancedA = model_metrics$balanced_accuracy, 
+      # BalancedA = model_metrics$balanced_accuracy, 
+      AUC_score = model_metrics$AUC_score, 
       F1_score = model_metrics$f1_score
     )
     
@@ -384,7 +401,7 @@ accuracy_comparison_plot <- function(metrics_list) {
 
 ### def specific_accuracy_statistics
 
-The `specific_accuracy_statistics` function calculates and organizes accuracy-related metrics for different models based on a given accuracy type. It takes three arguments: `event_pair`, which represents a specific event combination, `accuracy_type`, which specifies the type of accuracy metric to extract (either "balanced_accuracy" or "f1_score"), and `metrics_list`, a list containing accuracy data and corresponding model names. The function initializes a result list, placing `accuracy_type` in the top-left corner and `event_pair` as the first column. It then iterates through `metrics_list`, extracting and rounding the selected accuracy metric for each model. If an invalid `accuracy_type` is provided, it raises an error. Finally, the results are converted into a DataFrame and returned with row names set to `NULL`.
+The `specific_accuracy_statistics` function calculates and organizes accuracy-related metrics for different models based on a given accuracy type. It takes three arguments: `event_pair`, which represents a specific event combination, `accuracy_type`, which specifies the type of accuracy metric to extract ("balanced_accuracy", "auc_score" or "f1_score"), and `metrics_list`, a list containing accuracy data and corresponding model names. The function initializes a result list, placing `accuracy_type` in the top-left corner and `event_pair` as the first column. It then iterates through `metrics_list`, extracting and rounding the selected accuracy metric for each model. If an invalid `accuracy_type` is provided, it raises an error. Finally, the results are converted into a DataFrame and returned with row names set to `NULL`.
 
 ```{r}
 specific_accuracy_statistics <- function(event_pair, accuracy_type, metrics_list) {
@@ -402,6 +419,9 @@ specific_accuracy_statistics <- function(event_pair, accuracy_type, metrics_list
     model_name <- metric_item[[2]]
     if (accuracy_type == "balanced_accuracy") {
       results[[model_name]] <- round(accuracy_data$balanced_accuracy * 100, 2)
+    }
+    else if (accuracy_type == "auc_score") {
+      results[[model_name]] <- round(accuracy_data$auc_score * 100, 2)
     }
     else if (accuracy_type == "f1_score") {
       results[[model_name]] <- round(accuracy_data$f1_score * 100, 2)
@@ -441,12 +461,12 @@ combine_accuracy_dataframes <- function(df_list) {
 
 ### def logistic_regression
 
-This **logistic regression model** applies **Lasso regularization (L1 penalty)** for **binary classification** using the `glmnet` package. The model follows a structured workflow, starting with **data preprocessing**, where numeric features in the `train_set`, `validation_set`, and `test_data` are **standardized** (mean = 0, standard deviation = 1) to ensure stable optimization. The categorical variables are handled automatically by converting the dataset into **matrix format** using `model.matrix()`, which excludes the intercept and creates a design matrix suitable for `glmnet`. To **train the logistic regression model**, **Lasso regularization** (`alpha = 1`) is applied, which helps in **feature selection by shrinking less important coefficients to zero**, improving interpretability and reducing overfitting. The model first undergoes **cross-validation (`cv.glmnet()`)**, which automatically determines a range of `lambda` values (the regularization parameter) and selects the `lambda.min` that minimizes the cross-validation error. This approach helps **balance model complexity and generalization**, preventing overfitting while ensuring predictive performance. After selecting the **best lambda**, the model predicts **event probabilities** on both the `validation_set` and `test_data`, applying a **0.5 threshold** to classify instances as `"yes"` or `"no"`. Performance evaluation is conducted using **confusion matrices** and key classification metrics computed through the `calculate_model_metrics()` function.
+This **logistic regression model** employs **Lasso regularization (L1 penalty)** for **binary classification**, utilizing the `glmnet` package to enhance **feature selection** and **predictive accuracy**. The function begins with **data preprocessing**, where numeric features in the `train_set`, `validation_set`, and `test_data` are **standardized** (mean = 0, standard deviation = 1) to ensure stable optimization. Categorical variables are automatically handled by converting the dataset into a **matrix format** using `model.matrix()`, which excludes the intercept and prepares the data for use with `glmnet`. The logistic regression model is trained with **Lasso regularization** (`alpha = 1`), which **shrinks irrelevant feature coefficients to zero**, effectively performing **automatic feature selection** to improve model interpretability and reduce overfitting. To optimize model performance, **cross-validation (`cv.glmnet()`)** is performed to explore different values of the **regularization parameter (`lambda`)**, selecting the **optimal lambda (`lambda.min`)** that minimizes the cross-validation error. This ensures an optimal balance between **model complexity and generalization**, preventing overfitting while maintaining predictive power. After determining the **best lambda**, the model **predicts event probabilities** on both the `validation_set` and `test_data`. These probabilities are converted into **binary class labels ("yes" or "no")** using a specified **decision threshold (default = 0.5)**, which can be adjusted to account for class imbalance. The model’s classification performance is assessed using **confusion matrices**, and key metrics are computed through the `calculate_model_metrics()` function.
 
 ```{r}
-logistic_regression <- function(train_data, test_data) {
-  # library(glmnet)  # load glmnet package for logistic regression with regularization
-  # library(data.table)  # load data.table for efficient data handling
+logistic_regression <- function(train_data, test_data, threshold = 0.5) {
+  # library(glmnet) # load glmnet package for logistic regression with regularization
+  # library(data.table) # load data.table for efficient data handling
   # ensure train_data and test_data are in the data.table format for fast operations
   setDT(train_data)
   setDT(test_data)
@@ -485,16 +505,21 @@ logistic_regression <- function(train_data, test_data) {
   best_lambda <- cv_model$lambda.min  # Select the best lambda based on cross-validation
   
   # Predict the probability of the event (outcome) on the validation set
-  predict_probabilities_val <- predict(logistic_regression_classifier, s = best_lambda, newx = x_validation, type = "response")
-  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  predict_probabilities_val <- predict(logistic_regression_classifier, s = best_lambda, newx = x_validation, 
+                                       type = "response")
+  # Adjust threshold to handle class imbalance
+  binary_prediction_val <- ifelse(predict_probabilities_val > threshold, "yes", "no")
   validation_conf_matrix <- table(Predicted = binary_prediction_val, Actual = validation_set$event)
   
   # Evaluate validation set performance
-  validation_metrics <- calculate_model_metrics(validation_conf_matrix, predict_probabilities_val, "Logistic Regression (Validation)")
+  validation_metrics <- calculate_model_metrics(validation_conf_matrix, predict_probabilities_val, 
+                                                "Logistic Regression (Validation)")
   
   # Predict the probability of the event (outcome) on the test set using the best lambda
-  predict_probabilities_test <- predict(logistic_regression_classifier, s = best_lambda, newx = x_test, type = "response")
-  binary_prediction_test <- ifelse(predict_probabilities_test > 0.5, "yes", "no")
+  predict_probabilities_test <- predict(logistic_regression_classifier, s = best_lambda, newx = x_test, 
+                                        type = "response")
+  # Adjust threshold to handle class imbalance
+  binary_prediction_test <- ifelse(predict_probabilities_test > threshold, "yes", "no")
   
   # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
   test_conf_matrix <- table(Predicted = binary_prediction_test, Actual = test_data$event)
@@ -510,10 +535,10 @@ logistic_regression <- function(train_data, test_data) {
 
 ### def decision_tree
 
-This **decision tree model** is designed for **binary classification**, using the `rpart` package to construct and optimize a tree-based classifier. The model starts with **data partitioning**, where the training data is split into **80% training set and 20% validation set** to allow hyperparameter tuning. The decision tree is then trained on the `train_set` using the **CART (Classification and Regression Trees) algorithm**, with the **"class"** method to handle categorical target variables.Key hyperparameters are set through `rpart.control()`, including: **`cp = 0.01`**: The complexity parameter, which controls **pruning** by preventing overly complex trees. **`maxdepth = 30`**: The maximum depth of the tree, balancing complexity and generalization. **`minsplit = 20`**: The minimum number of observations required to split a node, ensuring stability in decision-making. After training, the model **predicts on the validation set**, and its performance is evaluated using a **confusion matrix** and classification metrics (`calculate_model_metrics()`). The final decision tree is then applied to the **test dataset**, producing **predicted labels**, which are compared against actual outcomes to compute key performance metrics.
+This **decision tree model** is a **binary classification algorithm** that leverages the `rpart` package to construct an optimized **CART (Classification and Regression Trees) model**. It begins with **data partitioning**, splitting the dataset into an **80% training set and a 20% validation set** to enable model evaluation. If `if_smote = TRUE`, **SMOTE (Synthetic Minority Over-sampling Technique)** is applied to the training data to address class imbalance while avoiding data leakage. The model is then trained using the **"class" method**, ensuring proper handling of categorical target variables. Key hyperparameters, including **`cp = 0.01`** (complexity parameter for pruning), **`maxdepth = 30`** (maximum tree depth to balance complexity and generalization), and **`minsplit = 20`** (minimum number of observations required to split a node), are set through `rpart.control()` to optimize model performance. After training, the model makes **predictions on the validation set**, and its performance is evaluated using a **confusion matrix** and key classification metrics via `calculate_model_metrics()`. The trained decision tree is then applied to the **test dataset**, where predicted labels are compared against actual values, and a confusion matrix is generated to assess performance.
 
 ```{r}
-decision_tree <- function(train_data, test_data) {
+decision_tree <- function(train_data, test_data, if_smote = FALSE) {
   # library(rpart)
   # library(caret) # Load caret for data partitioning
   
@@ -523,6 +548,11 @@ decision_tree <- function(train_data, test_data) {
   trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
   train_set <- train_data[trainIndex, ]
   validation_set <- train_data[-trainIndex, ]
+  
+  # Apply SMOTE on the training set only if if_smote is TRUE to avoid data leakage
+  if (if_smote == TRUE) {
+    train_set <- smote_data(train_set)
+  }
   
   # Train the decision tree model with hyperparameter tuning
   decision_tree_classifier <- rpart(
@@ -561,10 +591,10 @@ decision_tree <- function(train_data, test_data) {
 
 ### def naive_bayes
 
-This **Naive Bayes model** is designed for **binary classification**, leveraging the `e1071` package to implement a probabilistic classifier based on **Bayes' theorem** with the assumption of **feature independence**. The model begins with **data preprocessing**, where the target variable `event` is explicitly converted into a **factor** to ensure compatibility with Naive Bayes. The dataset is then **split into an 80% training set and a 20% validation set**, allowing for hyperparameter tuning and performance evaluation. Feature matrices for **validation and test sets** are prepared by removing the target column to ensure that the model only relies on predictors for classification. During training, the **Naive Bayes classifier** is built using the `naiveBayes()` function, which computes **prior probabilities** for each class and estimates conditional probabilities for each feature. Predictions are then made on the **validation set**, with both **class labels** and **probability scores** being generated. The model's performance is evaluated using a **confusion matrix** and various classification metrics, calculated through the `calculate_model_metrics()` function.
+This **Naive Bayes model** is a **probabilistic classifier** designed for **binary classification**, utilizing the `e1071` package to implement **Bayes' theorem** under the assumption of **feature independence**. The function begins with **data preprocessing**, ensuring that the target variable (`event`) is explicitly converted into a **factor** to maintain compatibility with the Naive Bayes algorithm. The dataset is then **split into an 80% training set and a 20% validation set**, enabling model evaluation and performance tuning. To prepare for classification, **feature matrices** for the **validation and test sets** are created by removing the target column, ensuring that the classifier only relies on predictor variables. The **Naive Bayes model** is trained using the `naiveBayes()` function, which estimates **prior probabilities** for each class and calculates **conditional probabilities** for each feature based on the training data distribution. Predictions are then generated for the **validation and test datasets**, providing both **class labels** and **probability scores**. To accommodate potential **class imbalance**, the model applies a **decision threshold (default = 0.5)** when converting predicted probabilities into binary classifications. The function then constructs **confusion matrices** for both validation and test sets, ensuring consistency by converting predictions and actual labels into factors with the same levels. Model performance is assessed using key **classification metrics** are computed through the `calculate_model_metrics()` function.
 
 ```{r}
-naive_bayes <- function(train_data, test_data) {
+naive_bayes <- function(train_data, test_data, threshold = 0.5) {
   # library(e1071)
   # library(caret) # Load caret for data partitioning
   
@@ -588,30 +618,27 @@ naive_bayes <- function(train_data, test_data) {
   # Train Naive Bayes model on train_set
   nb_model <- naiveBayes(as.formula(paste(target_column, "~ .")), data = train_set)
   
-  # Make predictions on the validation set
-  validation_predictions <- predict(nb_model, validation_features)
-  
   # Get prediction probabilities for validation set
   validation_probabilities <- predict(nb_model, validation_features, type = "raw")
+  # Adjust threshold to handle class imbalance
+  validation_predictions <- ifelse(validation_probabilities[, "yes"] > threshold, "yes", "no")
   
   # Evaluate model performance with a confusion matrix for validation set
   validation_conf_matrix <- table(Predicted = validation_predictions, Actual = validation_set[[target_column]])
   validation_metrics <- calculate_model_metrics(validation_conf_matrix, validation_probabilities, 
                                                 "Naive Bayes (Validation)")
   
-  # Make predictions on the test set
-  predictions <- predict(nb_model, test_features)
-  
   # Get prediction probabilities for test set
-  prediction_probabilities <- predict(nb_model, test_features, type = "raw")
-  
+  test_probabilities <- predict(nb_model, test_features, type = "raw")
+  # Adjust threshold to handle class imbalance
+  test_predictions <- ifelse(test_probabilities[, "yes"] > threshold, "yes", "no")
   # Ensure both predicted and actual labels are factors with the same levels
-  predictions <- factor(predictions, levels = levels(test_labels))
+  test_predictions <- factor(test_predictions, levels = levels(test_labels))
   
   # Evaluate model performance with a confusion matrix for test set
-  conf_matrix <- table(Predicted = predictions, Actual = test_labels)
+  conf_matrix <- table(Predicted = test_predictions, Actual = test_labels)
   
-  metrics_nb <- calculate_model_metrics(conf_matrix, prediction_probabilities, "Naive Bayes")
+  metrics_nb <- calculate_model_metrics(conf_matrix, test_probabilities, "Naive Bayes")
   
   # Create a dataframe with the desired structure
   metrics_nb_dataframe = get_dataframe("Naive Bayes", metrics_nb)
@@ -623,10 +650,10 @@ naive_bayes <- function(train_data, test_data) {
 
 ### def XG_Boost
 
-This **XGBoost model** is a powerful gradient boosting framework designed for **binary classification**, leveraging **parallel computation** and **tree-based learning** to achieve high predictive performance. The model starts with **data preprocessing**, where numeric features in the training, validation, and test sets are **standardized** to ensure stable optimization. The target variable is converted into **binary labels (0/1)** to align with the **logistic objective function** used in XGBoost. The dataset is then transformed into **DMatrix format**, a highly optimized data structure that accelerates computation and improves memory efficiency. The model employs **hyperparameters** such as `max_depth = 6`, `eta = 0.1`, `subsample = 0.8`, and `colsample_bytree = 0.8` to **balance complexity and generalization**. A **learning rate (`eta`)** of 0.1 is chosen to ensure stable convergence, while `max_depth` controls the depth of each decision tree, preventing overfitting. Additionally, `subsample` and `colsample_bytree` introduce **randomness in data selection**, enhancing model robustness. The model is trained using **200 boosting rounds**, with **early stopping** (`early_stopping_rounds = 10`) applied to prevent unnecessary computation when performance no longer improves on the validation set. After training, the model **predicts event probabilities** on both the validation and test sets. Predictions are converted into binary class labels using a **0.5 probability threshold**, and classification performance is assessed using **confusion matrices** and key evaluation metrics through `calculate_model_metrics()`.
+This **XGBoost model** is a high-performance **gradient boosting framework** tailored for **binary classification**, leveraging **parallel computation**, **tree-based learning**, and **regularization techniques** to enhance predictive accuracy. The function begins with **data preprocessing**, where numeric features in the training, validation, and test datasets are **standardized** to improve optimization stability. The target variable (`event`) is transformed into **binary labels (0/1)** to align with XGBoost’s **logistic regression objective** (`binary:logistic`). The dataset is then converted into **DMatrix format**, an optimized data structure that significantly boosts computational efficiency and memory usage. To handle class imbalance, the function calculates **scale_pos_weight**, which adjusts the model's sensitivity to minority class instances. If `if_smote = TRUE`, **SMOTE (Synthetic Minority Over-sampling Technique)** is applied to the training set, generating synthetic samples to mitigate class imbalance without introducing data leakage. The model is configured with **hyperparameters** such as `max_depth = 6`, `eta = 0.1`, `subsample = 0.8`, and `colsample_bytree = 0.8`, ensuring a balance between model complexity and generalization. A **learning rate (`eta`)** of 0.1 enables stable convergence, while `max_depth` limits tree expansion to prevent overfitting. The **subsample** and **colsample_bytree** parameters introduce **randomness in feature selection**, increasing model robustness against noise and reducing overfitting. The model is trained using **200 boosting rounds**, incorporating **early stopping (`early_stopping_rounds = 10`)**, which halts training if the validation loss does not improve, thus optimizing training efficiency. After training, the model generates **event probability predictions** for the validation and test datasets. These probabilities are converted into **binary class labels** using the specified **decision threshold (default = 0.5)**, which can be adjusted to accommodate class imbalance. The function then constructs **confusion matrices** to compare predicted vs. actual outcomes, ensuring predictions align with the expected factor levels. Finally, classification performance is assessed using key metrics computed through `calculate_model_metrics()`.
 
 ```{r}
-XG_Boost <- function(train_data, test_data) {
+XG_Boost <- function(train_data, test_data, threshold = 0.5, if_smote = FALSE) {
   # Convert train_data and test_data to data.table format
   setDT(train_data)
   setDT(test_data)
@@ -644,10 +671,19 @@ XG_Boost <- function(train_data, test_data) {
   validation_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
   test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
   
+  # Apply SMOTE on the training set only if if_smote is TRUE to avoid data leakage
+  if (if_smote == TRUE) {
+    train_set <- smote_data(train_set)
+  }
+  
   # Convert data to matrix format required by XGBoost
   x_train <- model.matrix(event ~ . - 1, data = train_set)
   # Convert event labels to 0/1
   y_train <- as.numeric(train_set$event == "yes")
+  
+  # Calculate scale_pos_weight based on training data distribution
+  scale_pos_weight <- sum(y_train == 0) / sum(y_train == 1)
+  
   x_validation <- model.matrix(event ~ . - 1, data = validation_set)
   y_validation <- as.numeric(validation_set$event == "yes")
   x_test <- model.matrix(event ~ . - 1, data = test_data)
@@ -668,7 +704,8 @@ XG_Boost <- function(train_data, test_data) {
     eta = 0.1,
     subsample = 0.8,
     colsample_bytree = 0.8,
-    nthread = num_cores
+    nthread = num_cores,
+    scale_pos_weight = scale_pos_weight # Adjusting for class imbalance
   )
   
   # Train XGBoost model with early stopping using validation set
@@ -681,7 +718,8 @@ XG_Boost <- function(train_data, test_data) {
   
   # Predict probabilities on the validation dataset
   predict_probabilities_val <- predict(xgb_model, dvalidation)
-  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  # Adjust threshold to handle class imbalance
+  binary_prediction_val <- ifelse(predict_probabilities_val > threshold, "yes", "no")
   validation_conf_matrix <- table(factor(binary_prediction_val, levels = c("yes", "no")),
                                   factor(validation_set$event, levels = c("yes", "no")))
   
@@ -691,8 +729,8 @@ XG_Boost <- function(train_data, test_data) {
   
   # Predict probabilities on the test dataset
   predict_probabilities_xgb <- predict(xgb_model, dtest)
-  # Convert predicted probabilities into binary class labels (yes/no) using a threshold of 0.5
-  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > 0.5, "yes", "no")
+  # Convert predicted probabilities into binary class labels (yes/no) using the threshold parameter
+  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > threshold, "yes", "no")
   
   # Ensure both predicted and actual labels are factors with the same levels
   binary_prediction_xgb <- factor(binary_prediction_xgb, levels = c("yes", "no"))
@@ -720,10 +758,10 @@ XG_Boost <- function(train_data, test_data) {
 
 ### def elastic_net
 
-This **Elastic Net model** is a **regularized logistic regression classifier** that combines **Lasso (L1) and Ridge (L2) penalties**, offering a balance between **feature selection** and **coefficient shrinkage**. The model starts with **data preprocessing**, where numeric features are standardized to ensure stable optimization, and categorical features are transformed into a matrix format using `model.matrix()`, making them compatible with `glmnet`. The dataset is then split into **80% training set and 20% validation set**, allowing for hyperparameter tuning to find the optimal regularization strength. Elastic Net is trained with an **alpha value of 0.5**, meaning it applies **equal weight to both L1 and L2 regularization**, ensuring that it not only selects important features (like Lasso) but also maintains **feature correlations** (like Ridge). The model then undergoes **cross-validation (`cv.glmnet()`)**, which evaluates multiple values of `lambda`, the regularization parameter. The **best lambda (`lambda.min`)** is selected based on the lowest cross-validation error, ensuring an optimal trade-off between **bias and variance**. Once the **best lambda** is determined, the model makes **probabilistic predictions** on both the validation and test sets. These probabilities are **converted into binary classifications** using a **0.5 decision threshold**, and performance is assessed using a **confusion matrix and key classification metrics**, calculated through `calculate_model_metrics()`.
+This **Elastic Net model** is a **regularized logistic regression classifier** that integrates **Lasso (L1) and Ridge (L2) penalties**, striking a balance between **feature selection** and **coefficient shrinkage**. The function begins with **data preprocessing**, where numeric features are **standardized** (mean = 0, standard deviation = 1) to enhance optimization stability, while categorical features are transformed into a **matrix format (`model.matrix()`)**, ensuring compatibility with `glmnet`. The dataset is then split into **80% training and 20% validation sets**, allowing for model evaluation and hyperparameter tuning. Elastic Net is trained using an **alpha value of 0.5**, meaning **equal weight is given to both L1 and L2 regularization**, promoting **sparse feature selection** while maintaining **feature correlations**. The function then employs **cross-validation (`cv.glmnet()`)**, which systematically explores different values of **lambda (the regularization parameter)**. The **optimal lambda (`lambda.min`)** is chosen based on the lowest cross-validation error, ensuring the model achieves a suitable balance between **bias and variance**. Once the **best lambda** is identified, the model predicts **event probabilities** for both validation and test datasets. These probabilities are converted into **binary class labels** (“yes” or “no”) using a specified **decision threshold (default = 0.5)**. Since class imbalance can affect predictions, the threshold can be adjusted for better calibration. The function then constructs a **confusion matrix** to compare predicted and actual values, followed by computing essential **classification metrics** using the `calculate_model_metrics()` function.
 
 ```{r}
-elastic_net <- function(train_data, test_data) {
+elastic_net <- function(train_data, test_data, threshold = 0.5) {
   # Load required libraries
   # library(glmnet) # Required for Elastic Net (Lasso + Ridge regularization)
   # library(data.table) # For efficient data handling using data.table
@@ -765,9 +803,11 @@ elastic_net <- function(train_data, test_data) {
   cv_model <- cv.glmnet(x_train, y_train, family = "binomial", alpha = 0.5)
   best_lambda <- cv_model$lambda.min
   
-  # Predict event probabilities for the validation dataset
-  predict_probabilities_val <- predict(elastic_net_model, s = best_lambda, newx = x_validation, type = "response")
-  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  # Predict event probabilities for the validation dataset using the best lambda
+  predict_probabilities_val <- predict(elastic_net_model, s = best_lambda, newx = x_validation, 
+                                       type = "response")
+  # Adjust threshold to handle class imbalance
+  binary_prediction_val <- ifelse(predict_probabilities_val > threshold, "yes", "no")
   validation_conf_matrix <- table(Predicted = binary_prediction_val, Actual = validation_set$event)
   
   # Evaluate validation performance
@@ -776,7 +816,8 @@ elastic_net <- function(train_data, test_data) {
   
   # Predict event probabilities for the test dataset using the best lambda
   predict_probabilities_en <- predict(elastic_net_model, s = best_lambda, newx = x_test, type = "response")
-  binary_prediction_en <- ifelse(predict_probabilities_en > 0.5, "yes", "no")
+  # Convert predicted probabilities into binary class labels (yes/no) using the threshold parameter
+  binary_prediction_en <- ifelse(predict_probabilities_en > threshold, "yes", "no")
   
   # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
   confusion_matrix_en <- table(Predicted = binary_prediction_en, Actual = test_data$event)

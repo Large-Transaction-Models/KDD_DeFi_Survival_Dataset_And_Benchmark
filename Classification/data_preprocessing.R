@@ -23,9 +23,29 @@ data_processing <- function(survivalData, set_timeDiff) {
       timeDiff / 86400 > set_timeDiff ~ "no"
     ))
   
-  featuresToDrop <- c("indexTime", "outcomeTime", "id", "Index Event", "Outcome Event",
-                      "timeDiff", "status", "deployment", "version", "indexID", "user", 
-                      "liquidator", "pool", "timestamp", "type", "datetime", "quarter_start_date")
+  featuresToDrop <-c("user", "outcomeTime", 
+                     "indexTime", "Index Event", "Outcome Event",
+                     "pool","timestamp","type","id","indexID",
+                     "datetime",
+                     "quarter_start_date", "userReserveMode",
+                     "userCoinTypeMode", "coinType", "userIsNew", 
+                     "userDepositSum", "userDepositSumUSD",
+                     "userDepositAvgAmountUSD", "userDepositSumETH",
+                     "userDepositAvgAmountETH", "userWithdrawSum",
+                     "userWithdrawSumUSD", "userWithdrawAvgAmountUSD",
+                     "userWithdrawSumETH", "userWithdrawAvgAmountETH",
+                     "userBorrowSum","userBorrowSumUSD", 
+                     "userBorrowAvgAmountUSD", "userBorrowSumETH",
+                     "userBorrowAvgAmountETH", "userRepaySum",
+                     "userRepaySumUSD", "userRepayAvgAmountUSD",
+                     "userRepaySumETH", "userRepayAvgAmountETH",
+                     "userLiquidationSum", 
+                     "userLiquidationSumUSD",
+                     "userLiquidationAvgAmountUSD",
+                     "userLiquidationSumETH",
+                     "userLiquidationAvgAmountETH",
+                     "userBorrowAvgAmount","priceInUSD",
+                     "cosQuarter", "timeDiff", "status")
   
   # remove only columns that actually exist in the dataset
   featuresToDrop <- intersect(featuresToDrop, colnames(survivalDataForClassification))

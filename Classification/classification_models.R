@@ -7,9 +7,9 @@ library(e1071)
 library(parallel)
 library(xgboost)
 
-logistic_regression <- function(train_data, test_data) {
-  # library(glmnet)  # load glmnet package for logistic regression with regularization
-  # library(data.table)  # load data.table for efficient data handling
+logistic_regression <- function(train_data, test_data, threshold = 0.5) {
+  # library(glmnet) # load glmnet package for logistic regression with regularization
+  # library(data.table) # load data.table for efficient data handling
   # ensure train_data and test_data are in the data.table format for fast operations
   setDT(train_data)
   setDT(test_data)
@@ -49,7 +49,8 @@ logistic_regression <- function(train_data, test_data) {
   
   # Predict the probability of the event (outcome) on the validation set
   predict_probabilities_val <- predict(logistic_regression_classifier, s = best_lambda, newx = x_validation, type = "response")
-  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  # Adjust threshold to handle class imbalance
+  binary_prediction_val <- ifelse(predict_probabilities_val > threshold, "yes", "no")
   validation_conf_matrix <- table(Predicted = binary_prediction_val, Actual = validation_set$event)
   
   # Evaluate validation set performance
@@ -57,7 +58,8 @@ logistic_regression <- function(train_data, test_data) {
   
   # Predict the probability of the event (outcome) on the test set using the best lambda
   predict_probabilities_test <- predict(logistic_regression_classifier, s = best_lambda, newx = x_test, type = "response")
-  binary_prediction_test <- ifelse(predict_probabilities_test > 0.5, "yes", "no")
+  # Adjust threshold to handle class imbalance
+  binary_prediction_test <- ifelse(predict_probabilities_test > threshold, "yes", "no")
   
   # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
   test_conf_matrix <- table(Predicted = binary_prediction_test, Actual = test_data$event)
@@ -70,7 +72,7 @@ logistic_regression <- function(train_data, test_data) {
   return (list(metrics_lr_dataframe = metrics_lr_dataframe, metrics_lr = metrics_lr))
 }
 
-decision_tree <- function(train_data, test_data) {
+decision_tree <- function(train_data, test_data, if_smote = FALSE) {
   # library(rpart)
   # library(caret) # Load caret for data partitioning
   
@@ -80,6 +82,11 @@ decision_tree <- function(train_data, test_data) {
   trainIndex <- createDataPartition(train_data$event, p = 0.8, list = FALSE)
   train_set <- train_data[trainIndex, ]
   validation_set <- train_data[-trainIndex, ]
+  
+  # Apply SMOTE on the training set only if if_smote is TRUE to avoid data leakage
+  if (if_smote == TRUE) {
+    train_set <- smote_data(train_set)
+  }
   
   # Train the decision tree model with hyperparameter tuning
   decision_tree_classifier <- rpart(
@@ -115,7 +122,7 @@ decision_tree <- function(train_data, test_data) {
   return (list(metrics_dt_dataframe = metrics_dt_dataframe, metrics_dt = metrics_dt))
 }
 
-naive_bayes <- function(train_data, test_data) {
+naive_bayes <- function(train_data, test_data, threshold = 0.5) {
   # library(e1071)
   # library(caret) # Load caret for data partitioning
   
@@ -139,30 +146,27 @@ naive_bayes <- function(train_data, test_data) {
   # Train Naive Bayes model on train_set
   nb_model <- naiveBayes(as.formula(paste(target_column, "~ .")), data = train_set)
   
-  # Make predictions on the validation set
-  validation_predictions <- predict(nb_model, validation_features)
-  
   # Get prediction probabilities for validation set
   validation_probabilities <- predict(nb_model, validation_features, type = "raw")
+  # Adjust threshold to handle class imbalance
+  validation_predictions <- ifelse(validation_probabilities[, "yes"] > threshold, "yes", "no")
   
   # Evaluate model performance with a confusion matrix for validation set
   validation_conf_matrix <- table(Predicted = validation_predictions, Actual = validation_set[[target_column]])
   validation_metrics <- calculate_model_metrics(validation_conf_matrix, validation_probabilities, 
                                                 "Naive Bayes (Validation)")
   
-  # Make predictions on the test set
-  predictions <- predict(nb_model, test_features)
-  
   # Get prediction probabilities for test set
-  prediction_probabilities <- predict(nb_model, test_features, type = "raw")
-  
+  test_probabilities <- predict(nb_model, test_features, type = "raw")
+  # Adjust threshold to handle class imbalance
+  test_predictions <- ifelse(test_probabilities[, "yes"] > threshold, "yes", "no")
   # Ensure both predicted and actual labels are factors with the same levels
-  predictions <- factor(predictions, levels = levels(test_labels))
+  test_predictions <- factor(test_predictions, levels = levels(test_labels))
   
   # Evaluate model performance with a confusion matrix for test set
-  conf_matrix <- table(Predicted = predictions, Actual = test_labels)
+  conf_matrix <- table(Predicted = test_predictions, Actual = test_labels)
   
-  metrics_nb <- calculate_model_metrics(conf_matrix, prediction_probabilities, "Naive Bayes")
+  metrics_nb <- calculate_model_metrics(conf_matrix, test_probabilities, "Naive Bayes")
   
   # Create a dataframe with the desired structure
   metrics_nb_dataframe = get_dataframe("Naive Bayes", metrics_nb)
@@ -171,7 +175,7 @@ naive_bayes <- function(train_data, test_data) {
   return (list(metrics_nb_dataframe = metrics_nb_dataframe, metrics_nb = metrics_nb))
 }
 
-XG_Boost <- function(train_data, test_data) {
+XG_Boost <- function(train_data, test_data, threshold = 0.5, if_smote = FALSE) {
   # Convert train_data and test_data to data.table format
   setDT(train_data)
   setDT(test_data)
@@ -189,10 +193,19 @@ XG_Boost <- function(train_data, test_data) {
   validation_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
   test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
   
+  # Apply SMOTE on the training set only if if_smote is TRUE to avoid data leakage
+  if (if_smote == TRUE) {
+    train_set <- smote_data(train_set)
+  }
+  
   # Convert data to matrix format required by XGBoost
   x_train <- model.matrix(event ~ . - 1, data = train_set)
   # Convert event labels to 0/1
   y_train <- as.numeric(train_set$event == "yes")
+  
+  # Calculate scale_pos_weight based on training data distribution
+  scale_pos_weight <- sum(y_train == 0) / sum(y_train == 1)
+  
   x_validation <- model.matrix(event ~ . - 1, data = validation_set)
   y_validation <- as.numeric(validation_set$event == "yes")
   x_test <- model.matrix(event ~ . - 1, data = test_data)
@@ -213,7 +226,8 @@ XG_Boost <- function(train_data, test_data) {
     eta = 0.1,
     subsample = 0.8,
     colsample_bytree = 0.8,
-    nthread = num_cores
+    nthread = num_cores,
+    scale_pos_weight = scale_pos_weight # Adjusting for class imbalance
   )
   
   # Train XGBoost model with early stopping using validation set
@@ -226,7 +240,8 @@ XG_Boost <- function(train_data, test_data) {
   
   # Predict probabilities on the validation dataset
   predict_probabilities_val <- predict(xgb_model, dvalidation)
-  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  # Adjust threshold to handle class imbalance
+  binary_prediction_val <- ifelse(predict_probabilities_val > threshold, "yes", "no")
   validation_conf_matrix <- table(factor(binary_prediction_val, levels = c("yes", "no")),
                                   factor(validation_set$event, levels = c("yes", "no")))
   
@@ -236,8 +251,8 @@ XG_Boost <- function(train_data, test_data) {
   
   # Predict probabilities on the test dataset
   predict_probabilities_xgb <- predict(xgb_model, dtest)
-  # Convert predicted probabilities into binary class labels (yes/no) using a threshold of 0.5
-  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > 0.5, "yes", "no")
+  # Convert predicted probabilities into binary class labels (yes/no) using the threshold parameter
+  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > threshold, "yes", "no")
   
   # Ensure both predicted and actual labels are factors with the same levels
   binary_prediction_xgb <- factor(binary_prediction_xgb, levels = c("yes", "no"))
@@ -262,7 +277,7 @@ XG_Boost <- function(train_data, test_data) {
   return (list(metrics_xgb_dataframe = metrics_xgb_dataframe, metrics_xgb = metrics_xgb))
 }
 
-elastic_net <- function(train_data, test_data) {
+elastic_net <- function(train_data, test_data, threshold = 0.5) {
   # Load required libraries
   # library(glmnet) # Required for Elastic Net (Lasso + Ridge regularization)
   # library(data.table) # For efficient data handling using data.table
@@ -304,9 +319,10 @@ elastic_net <- function(train_data, test_data) {
   cv_model <- cv.glmnet(x_train, y_train, family = "binomial", alpha = 0.5)
   best_lambda <- cv_model$lambda.min
   
-  # Predict event probabilities for the validation dataset
+  # Predict event probabilities for the validation dataset using the best lambda
   predict_probabilities_val <- predict(elastic_net_model, s = best_lambda, newx = x_validation, type = "response")
-  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  # Adjust threshold to handle class imbalance
+  binary_prediction_val <- ifelse(predict_probabilities_val > threshold, "yes", "no")
   validation_conf_matrix <- table(Predicted = binary_prediction_val, Actual = validation_set$event)
   
   # Evaluate validation performance
@@ -315,7 +331,8 @@ elastic_net <- function(train_data, test_data) {
   
   # Predict event probabilities for the test dataset using the best lambda
   predict_probabilities_en <- predict(elastic_net_model, s = best_lambda, newx = x_test, type = "response")
-  binary_prediction_en <- ifelse(predict_probabilities_en > 0.5, "yes", "no")
+  # Convert predicted probabilities into binary class labels (yes/no) using the threshold parameter
+  binary_prediction_en <- ifelse(predict_probabilities_en > threshold, "yes", "no")
   
   # Create a confusion matrix to compare predicted vs. actual outcomes in the test set
   confusion_matrix_en <- table(Predicted = binary_prediction_en, Actual = test_data$event)

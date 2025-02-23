@@ -4,49 +4,66 @@ library(ggplot2)
 library(scales)
 library(reshape2)
 library(caret)
+library(pROC)
 
 calculate_model_metrics <- function(confusion_matrix, binary_predictions, model_name) {
+  # Load required package
+  # library(pROC) # Ensure this package is installed for AUC calculation
+  
   TN <- confusion_matrix[1, 1] # True Negatives
   FP <- confusion_matrix[1, 2] # False Positives
   FN <- confusion_matrix[2, 1] # False Negatives
   TP <- confusion_matrix[2, 2] # True Positives
   
-  # positive Class accuracy (Specificity): TN / (TN + FP)
-  class_accuracy <- TN / (TN + FP)
+  # Specificity (True Negative Rate)
+  specificity <- TN / (TN + FP)
   
-  # negative 1 accuracy (Sensitivity/Recall): TP / (TP + FN)
-  negative_1_accuracy <- TP / (TP + FN)
+  # Sensitivity (Recall, True Positive Rate)
+  sensitivity <- TP / (TP + FN)
   
-  # balanced accuracy: Average of Sensitivity and Specificity
-  balanced_accuracy <- (class_accuracy + negative_1_accuracy) / 2
+  # Balanced Accuracy (Average of Sensitivity and Specificity)
+  balanced_accuracy <- (specificity + sensitivity) / 2
   
-  # precision
+  # Precision
   precision <- TP / (TP + FP)
   
-  # f1 score
-  f1_score <- 2 * (precision * negative_1_accuracy) / (precision + negative_1_accuracy)
+  # F1 Score
+  f1_score <- 2 * (precision * sensitivity) / (precision + sensitivity)
   
-  if (is.nan(balanced_accuracy)) {
-    balanced_accuracy <- 0.50
+  # Ensure values are not NaN (caused by zero division)
+  if (is.nan(balanced_accuracy)) balanced_accuracy <- 0.50
+  if (is.nan(f1_score)) f1_score <- 0.50
+  
+  # Compute AUC (Area Under the Curve) Score
+  actual_labels <- as.numeric(rownames(confusion_matrix)) # Extract actual labels
+  predicted_probabilities <- as.numeric(binary_predictions) # Ensure predictions are numeric
+  
+  auc_score <- NA  # Default value in case of calculation failure
+  # Ensure there are at least two unique classes
+  if (length(unique(actual_labels)) > 1) {
+    roc_curve <- roc(actual_labels, predicted_probabilities)
+    auc_score <- auc(roc_curve)
   }
   
-  if (is.nan(f1_score)) {
-    f1_score <- 0.50
-  }
-  
-  # print out all the accuracy records
+  # Print all performance metrics
   print(paste(model_name, "model prediction accuracy:"))
-  cat("Balanced accuracy:", sprintf("%.2f%%", balanced_accuracy * 100), "\n")
-  cat("F1 score:", sprintf("%.2f%%", f1_score * 100), "\n")
+  cat("Balanced Accuracy:", sprintf("%.2f%%", balanced_accuracy * 100), "\n")
+  cat("F1 Score:", sprintf("%.2f%%", f1_score * 100), "\n")
+  cat("AUC Score:", sprintf("%.2f", auc_score), "\n")
   
-  return (list(balanced_accuracy = balanced_accuracy, 
-               f1_score = f1_score))
+  # Return all computed metrics in a list
+  return (list(
+    balanced_accuracy = balanced_accuracy, 
+    f1_score = f1_score,
+    auc_score = auc_score
+  ))
 }
 
 get_dataframe <- function(model_name, metrics) {
   metrics_dataframe <- data.frame(
     Model = model_name, 
-    Balanced_Accuracy = sprintf("%.2f%%", metrics$balanced_accuracy * 100), 
+    # Balanced_Accuracy = sprintf("%.2f%%", metrics$balanced_accuracy * 100), 
+    AUC_Score = sprintf("%.2f%%", metrics$auc_score * 100), 
     F1_Score = sprintf("%.2f%%", metrics$f1_score * 100)
   )
   return (metrics_dataframe)
@@ -105,7 +122,8 @@ accuracy_comparison_plot <- function(metrics_list) {
     # create a temporary dataframe for this model
     temp_df <- data.frame(
       Model = model_name, 
-      BalancedA = model_metrics$balanced_accuracy, 
+      # BalancedA = model_metrics$balanced_accuracy, 
+      AUC_score = model_metrics$AUC_score, 
       F1_score = model_metrics$f1_score
     )
     
@@ -146,6 +164,9 @@ specific_accuracy_statistics <- function(event_pair, accuracy_type, metrics_list
     model_name <- metric_item[[2]]
     if (accuracy_type == "balanced_accuracy") {
       results[[model_name]] <- round(accuracy_data$balanced_accuracy * 100, 2)
+    }
+    else if (accuracy_type == "auc_score") {
+      results[[model_name]] <- round(accuracy_data$auc_score * 100, 2)
     }
     else if (accuracy_type == "f1_score") {
       results[[model_name]] <- round(accuracy_data$f1_score * 100, 2)
