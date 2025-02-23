@@ -375,6 +375,18 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 check_smote_data <- smote_data(train_data)
 get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
@@ -389,18 +401,6 @@ accuracy_dt = dt_return$metrics_dt
 xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
 ```
 
 ```{r}
@@ -468,6 +468,18 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 check_smote_data <- smote_data(train_data)
 get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
@@ -482,18 +494,6 @@ accuracy_dt = dt_return$metrics_dt
 xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
 ```
 
 ```{r}
@@ -561,6 +561,18 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 check_smote_data <- smote_data(train_data)
 get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
@@ -575,18 +587,6 @@ accuracy_dt = dt_return$metrics_dt
 xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
 ```
 
 ```{r}
@@ -654,6 +654,18 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 check_smote_data <- smote_data(train_data)
 get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
@@ -668,18 +680,6 @@ accuracy_dt = dt_return$metrics_dt
 xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
 ```
 
 ```{r}
@@ -835,6 +835,18 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 check_smote_data <- smote_data(train_data)
 get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
@@ -849,18 +861,6 @@ accuracy_dt = dt_return$metrics_dt
 xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
 ```
 
 ```{r}
@@ -1104,6 +1104,18 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 check_smote_data <- smote_data(train_data)
 get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
@@ -1118,18 +1130,6 @@ accuracy_dt = dt_return$metrics_dt
 xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
 ```
 
 ```{r}
@@ -1197,6 +1197,18 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 check_smote_data <- smote_data(train_data)
 get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
@@ -1211,18 +1223,6 @@ accuracy_dt = dt_return$metrics_dt
 xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
 ```
 
 ```{r}
@@ -1290,6 +1290,18 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 check_smote_data <- smote_data(train_data)
 get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
@@ -1304,18 +1316,6 @@ accuracy_dt = dt_return$metrics_dt
 xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
 ```
 
 ```{r}
@@ -1383,6 +1383,18 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 check_smote_data <- smote_data(train_data)
 get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
@@ -1397,18 +1409,6 @@ accuracy_dt = dt_return$metrics_dt
 xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
-dh_return = deephit_model(train_data, test_data)
-accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
-accuracy_dh = dh_return$metrics_dh
-```
-
-```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
-accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
-accuracy_tfs = tfs_return$metrics_tfs
 ```
 
 ```{r}
