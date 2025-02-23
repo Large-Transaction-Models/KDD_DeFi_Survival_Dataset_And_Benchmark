@@ -111,13 +111,13 @@ get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-dt_return = decision_tree(train_data, test_data)
+dt_return = decision_tree(train_data, test_data, if_smote = TRUE)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
@@ -380,13 +380,13 @@ get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-dt_return = decision_tree(train_data, test_data)
+dt_return = decision_tree(train_data, test_data, if_smote = TRUE)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
@@ -473,13 +473,13 @@ get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-dt_return = decision_tree(train_data, test_data)
+dt_return = decision_tree(train_data, test_data, if_smote = TRUE)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
@@ -566,13 +566,13 @@ get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-dt_return = decision_tree(train_data, test_data)
+dt_return = decision_tree(train_data, test_data, if_smote = TRUE)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
@@ -659,13 +659,13 @@ get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-dt_return = decision_tree(train_data, test_data)
+dt_return = decision_tree(train_data, test_data, if_smote = TRUE)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
@@ -840,13 +840,13 @@ get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-dt_return = decision_tree(train_data, test_data)
+dt_return = decision_tree(train_data, test_data, if_smote = TRUE)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
@@ -1016,11 +1016,6 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
-check_smote_data <- smote_data(train_data)
-get_percentage(check_smote_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 dt_return = decision_tree(train_data, test_data)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
@@ -1114,13 +1109,13 @@ get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-dt_return = decision_tree(train_data, test_data)
+dt_return = decision_tree(train_data, test_data, if_smote = TRUE)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
@@ -1207,13 +1202,13 @@ get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-dt_return = decision_tree(train_data, test_data)
+dt_return = decision_tree(train_data, test_data, if_smote = TRUE)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
@@ -1300,13 +1295,13 @@ get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-dt_return = decision_tree(train_data, test_data)
+dt_return = decision_tree(train_data, test_data, if_smote = TRUE)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
@@ -1393,13 +1388,13 @@ get_percentage(check_smote_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-dt_return = decision_tree(train_data, test_data)
+dt_return = decision_tree(train_data, test_data, if_smote = TRUE)
 accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
 accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
+xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
 accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
 accuracy_xgb = xgb_return$metrics_xgb
 ```
