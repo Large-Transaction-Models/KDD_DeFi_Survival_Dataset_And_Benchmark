@@ -66,8 +66,8 @@ calculate_model_metrics <- function(confusion_matrix, binary_predictions, model_
 get_dataframe <- function(model_name, metrics) {
   metrics_dataframe <- data.frame(
     Model = model_name, 
-    Balanced_Accuracy = sprintf("%.2f%%", metrics$balanced_accuracy * 100),
-    # AUC_Score = sprintf("%.2f%%", metrics$auc_score * 100), 
+    # Balanced_Accuracy = sprintf("%.2f%%", metrics$balanced_accuracy * 100),
+    AUC_Score = sprintf("%.2f%%", metrics$auc_score * 100),
     F1_Score = sprintf("%.2f%%", metrics$f1_score * 100)
   )
   return (metrics_dataframe)
@@ -126,8 +126,8 @@ accuracy_comparison_plot <- function(metrics_list) {
     # create a temporary dataframe for this model
     temp_df <- data.frame(
       Model = model_name, 
-      BalancedA = model_metrics$balanced_accuracy,
-      # AUC_score = model_metrics$AUC_score, 
+      # BalancedA = model_metrics$balanced_accuracy,
+      AUC_score = model_metrics$AUC_score,
       F1_score = model_metrics$f1_score
     )
     
