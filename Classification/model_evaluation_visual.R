@@ -39,7 +39,7 @@ calculate_model_metrics <- function(confusion_matrix, binary_predictions, model_
   predicted_probabilities <- as.numeric(binary_predictions) # Convert predictions to numeric
   
   # Calculate the AUC (Area Under the Curve) Score
-  auc_score <- NA # Default value in case the AUC cannot be calculated
+  auc_score <- NaN # Default value in case the AUC cannot be calculated
   if (length(actual_labels) == length(predicted_probabilities) && length(unique(actual_labels)) > 1) {
     roc_curve <- roc(actual_labels, predicted_probabilities)
     auc_score <- auc(roc_curve)

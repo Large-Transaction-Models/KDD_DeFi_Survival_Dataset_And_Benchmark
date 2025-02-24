@@ -249,12 +249,17 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-dh_return = deephit_model(train_data, test_data)
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data, if_smote = TRUE)
 accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
 ```
 
 ```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
+tfs_return = transformation_surv_model(train_data, test_data, if_smote = TRUE)
 accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
 ```
 
@@ -561,12 +566,17 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-dh_return = deephit_model(train_data, test_data)
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data, if_smote = TRUE)
 accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
 ```
 
 ```{r}
-tfs_return = transformation_surv_model(train_data, test_data)
+tfs_return = transformation_surv_model(train_data, test_data, if_smote = TRUE)
 accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
 ```
 

@@ -268,7 +268,7 @@ naive_bayes_op <- function(train_data, test_data) {
   return (list(metrics_nb_dataframe = metrics_nb_dataframe, metrics_nb = metrics_nb))
 }
 
-XG_Boost <- function(train_data, test_data) {
+XG_Boost <- function(train_data, test_data, threshold = 0.5, if_smote = FALSE) {
   # Convert train_data and test_data to data.table format
   setDT(train_data)
   setDT(test_data)
@@ -286,10 +286,19 @@ XG_Boost <- function(train_data, test_data) {
   validation_set[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
   test_data[, (numeric_features) := lapply(.SD, scale), .SDcols = numeric_features]
   
+  # Apply SMOTE on the training set only if if_smote is TRUE to avoid data leakage
+  if (if_smote == TRUE) {
+    train_set <- smote_data(train_set)
+  }
+  
   # Convert data to matrix format required by XGBoost
   x_train <- model.matrix(event ~ . - 1, data = train_set)
   # Convert event labels to 0/1
   y_train <- as.numeric(train_set$event == "yes")
+  
+  # Calculate scale_pos_weight based on training data distribution
+  scale_pos_weight <- sum(y_train == 0) / sum(y_train == 1)
+  
   x_validation <- model.matrix(event ~ . - 1, data = validation_set)
   y_validation <- as.numeric(validation_set$event == "yes")
   x_test <- model.matrix(event ~ . - 1, data = test_data)
@@ -310,7 +319,8 @@ XG_Boost <- function(train_data, test_data) {
     eta = 0.1,
     subsample = 0.8,
     colsample_bytree = 0.8,
-    nthread = num_cores
+    nthread = num_cores,
+    scale_pos_weight = scale_pos_weight # Adjusting for class imbalance
   )
   
   # Train XGBoost model with early stopping using validation set
@@ -323,7 +333,8 @@ XG_Boost <- function(train_data, test_data) {
   
   # Predict probabilities on the validation dataset
   predict_probabilities_val <- predict(xgb_model, dvalidation)
-  binary_prediction_val <- ifelse(predict_probabilities_val > 0.5, "yes", "no")
+  # Adjust threshold to handle class imbalance
+  binary_prediction_val <- ifelse(predict_probabilities_val > threshold, "yes", "no")
   validation_conf_matrix <- table(factor(binary_prediction_val, levels = c("yes", "no")),
                                   factor(validation_set$event, levels = c("yes", "no")))
   
@@ -333,8 +344,8 @@ XG_Boost <- function(train_data, test_data) {
   
   # Predict probabilities on the test dataset
   predict_probabilities_xgb <- predict(xgb_model, dtest)
-  # Convert predicted probabilities into binary class labels (yes/no) using a threshold of 0.5
-  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > 0.5, "yes", "no")
+  # Convert predicted probabilities into binary class labels (yes/no) using the threshold parameter
+  binary_prediction_xgb <- ifelse(predict_probabilities_xgb > threshold, "yes", "no")
   
   # Ensure both predicted and actual labels are factors with the same levels
   binary_prediction_xgb <- factor(binary_prediction_xgb, levels = c("yes", "no"))

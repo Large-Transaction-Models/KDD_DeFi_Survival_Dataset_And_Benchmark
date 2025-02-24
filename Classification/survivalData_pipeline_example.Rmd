@@ -114,13 +114,27 @@ accuracy_en = en_return$metrics_en
 ```
 
 ```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
 # compare all the classification models
 metrics_list_BR <- list(
   list(accuracy_lr, "Logistic Regression"), 
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_BR)
 ```
@@ -131,7 +145,8 @@ accuracy_comparison_plot(metrics_list_BR)
 data_name_BR <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BR <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_BR <- combine_classification_results(accuracy_dataframe_list_BR, data_name_BR)
 
 # display the combined dataframe
@@ -157,20 +172,9 @@ get_percentage(train_data, indexEvent, outcomeEvent)
 ```
 
 ```{r}
-train_data <- smote_data(train_data)
-get_percentage(train_data, indexEvent, outcomeEvent)
-```
-
-```{r}
 lr_return = logistic_regression(train_data, test_data)
 accuracy_lr_dataframe = lr_return$metrics_lr_dataframe
 accuracy_lr = lr_return$metrics_lr
-```
-
-```{r}
-dt_return = decision_tree(train_data, test_data)
-accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
-accuracy_dt = dt_return$metrics_dt
 ```
 
 ```{r}
@@ -180,15 +184,38 @@ accuracy_nb = nb_return$metrics_nb
 ```
 
 ```{r}
-xgb_return = XG_Boost(train_data, test_data)
-accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
-accuracy_xgb = xgb_return$metrics_xgb
-```
-
-```{r}
 en_return = elastic_net(train_data, test_data)
 accuracy_en_dataframe = en_return$metrics_en_dataframe
 accuracy_en = en_return$metrics_en
+```
+
+```{r}
+dh_return = deephit_model(train_data, test_data)
+accuracy_dh_dataframe = dh_return$metrics_dh_dataframe
+accuracy_dh = dh_return$metrics_dh
+```
+
+```{r}
+tfs_return = transformation_surv_model(train_data, test_data)
+accuracy_tfs_dataframe = tfs_return$metrics_tfs_dataframe
+accuracy_tfs = tfs_return$metrics_tfs
+```
+
+```{r}
+check_smote_data <- smote_data(train_data)
+get_percentage(check_smote_data, indexEvent, outcomeEvent)
+```
+
+```{r}
+dt_return = decision_tree(train_data, test_data, if_smote = TRUE)
+accuracy_dt_dataframe = dt_return$metrics_dt_dataframe
+accuracy_dt = dt_return$metrics_dt
+```
+
+```{r}
+xgb_return = XG_Boost(train_data, test_data, if_smote = TRUE)
+accuracy_xgb_dataframe = xgb_return$metrics_xgb_dataframe
+accuracy_xgb = xgb_return$metrics_xgb
 ```
 
 ```{r}
@@ -198,7 +225,9 @@ metrics_list_BW <- list(
   list(accuracy_dt, "Decision Tree"), 
   list(accuracy_nb, "Naive Bayes"), 
   list(accuracy_xgb, "XGBoost"), 
-  list(accuracy_en, "Elastic Net")
+  list(accuracy_en, "Elastic Net"), 
+  list(accuracy_dh, "DeepHit"), 
+  list(accuracy_tfs, "Transformation Surv")
 )
 accuracy_comparison_plot(metrics_list_BW)
 ```
@@ -209,7 +238,8 @@ accuracy_comparison_plot(metrics_list_BW)
 data_name_BW <- paste(indexEvent, "+", outcomeEvent)
 accuracy_dataframe_list_BW <- list(accuracy_lr_dataframe, accuracy_dt_dataframe, 
                                    accuracy_nb_dataframe, accuracy_xgb_dataframe, 
-                                   accuracy_en_dataframe)
+                                   accuracy_en_dataframe, accuracy_dh_dataframe, 
+                                   accuracy_tfs_dataframe)
 combined_results_BW <- combine_classification_results(accuracy_dataframe_list_BW, data_name_BW)
 
 # display the combined dataframe

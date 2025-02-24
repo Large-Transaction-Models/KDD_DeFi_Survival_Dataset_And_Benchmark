@@ -3,7 +3,7 @@ library(dplyr) # Provides functions for data manipulation and transformation
 
 # Function to train a DeepHit model using the given training and test datasets
 deephit_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L, 64L), 
-                          dropout = 0, batch_size = 256L, lr = 0.001, class_weight = NULL) {
+                          dropout = 0, batch_size = 256L, lr = 0.001, class_weight = NULL, if_smote = FALSE) {
   
   # library(reticulate) # Enables integration with Python, allowing R to call Python functions
   # library(dplyr) # Provides functions for data manipulation and transformation
@@ -24,6 +24,11 @@ deephit_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L,
   val_idx <- setdiff(seq_len(nrow(train_data)), train_idx)
   train_subset <- train_data[train_idx, ]
   val_subset <- train_data[val_idx, ]
+  
+  # Apply SMOTE on the training subset only if if_smote is TRUE to avoid data leakage
+  if (if_smote == TRUE) {
+    train_subset <- smote_data(train_subset)
+  }
   
   # Preprocess: Remove the "id" column if it exists in any of the datasets, as it is not needed for model training.
   if ("id" %in% names(train_subset)) {
@@ -145,7 +150,7 @@ deephit_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L,
 
 # Function to train a Transformation Survival model using the given training and test datasets
 transformation_surv_model <- function(train_data, test_data, epochs = 10, num_nodes = c(64L, 64L), dropout = 0, 
-                                      batch_size = 256L, lr = 0.001, class_weight = NULL) {
+                                      batch_size = 256L, lr = 0.001, class_weight = NULL, if_smote = FALSE) {
   
   # library(reticulate) # Enables integration with Python, allowing R to call Python functions
   # library(dplyr) # Provides functions for data manipulation and transformation
@@ -166,6 +171,11 @@ transformation_surv_model <- function(train_data, test_data, epochs = 10, num_no
   val_idx <- setdiff(seq_len(nrow(train_data)), train_idx)
   train_subset <- train_data[train_idx, ]
   val_subset <- train_data[val_idx, ]
+  
+  # Apply SMOTE on the training subset only if if_smote is TRUE to avoid data leakage
+  if (if_smote == TRUE) {
+    train_subset <- smote_data(train_subset)
+  }
   
   # Preprocess: Remove the "id" column from training, validation, and testing datasets if present
   if ("id" %in% names(train_subset)) {
